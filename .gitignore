@@ -1,0 +1,28 @@
+# Go
+/bin/
+/vendor/
+*.exe
+*.test
+*.out
+go.work
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Личные / черновые заметки (не часть репозитория)
+фишки на будущее
+*.notes.txt
+NOTES*

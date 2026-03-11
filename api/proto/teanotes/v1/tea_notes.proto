@@ -1,0 +1,130 @@
+syntax = "proto3";
+
+package teanotes.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "notea/api/proto/teanotes/v1;teanotesv1";
+
+
+message DescriptorCategory {
+  string id = 1;
+  string name = 2;
+  string color_hex = 3;
+  repeated DescriptorSegment segments = 4;
+}
+
+message DescriptorSegment {
+  string id = 1;
+  string name = 2;
+  repeated Descriptor descriptors = 3;
+}
+
+message Descriptor {
+  string id = 1;
+  string name = 2;
+  DescriptorType type = 3;
+  string color_hex = 4;
+}
+
+enum DescriptorType {
+  DESCRIPTOR_TYPE_UNSPECIFIED = 0;
+  DESCRIPTOR_TYPE_AROMA = 1;
+  DESCRIPTOR_TYPE_TASTE = 2;
+  DESCRIPTOR_TYPE_BOTH = 3;
+}
+
+
+// Сервис чайных заметок: каталог чаёв и сессии заваривания.
+service TeaNotesService {
+  // Создать сессию заваривания.
+  rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
+  // Получить одну сессию по id.
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse);
+  // Список сессий (позже добавим фильтры по user_id, tea_id).
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+  // Справочник чаёв: сорт + провинция.
+  rpc ListTeas(ListTeasRequest) returns (ListTeasResponse);
+  rpc ListDescriptorCategories(ListDescriptorCategoriesRequest) returns (ListDescriptorCategoriesResponse);
+}
+
+// ---- Справочник чаёв ----
+
+message Tea {
+  string id = 1;
+  string name = 2;      // сорт, например "Шу Пуэр"
+  string province = 3;  // провинция, например "Юньнань"
+  string variant = 4;   // опционально: "с жасмином", пусто если нет
+}
+
+message ListTeasRequest {
+  // пока без фильтров
+}
+
+message ListTeasResponse {
+  repeated Tea teas = 1;
+}
+
+message ListDescriptorCategoriesRequest {
+
+}
+
+message ListDescriptorCategoriesResponse {
+  repeated Descriptor category = 1;
+}
+
+// ---- Сессия заваривания ----
+
+message BrewingParams {
+  int32 temperature_c = 1;       // температура воды, °C
+  int32 steep_sec = 2;           // время пролива, секунды
+  double leaves_g_per_100ml = 3; // грамм листа на 100 мл воды
+}
+
+// Один дескриптор с интенсивностью (фиксированный список, id от 1 до N).
+message DescriptorScore {
+  string descriptor_id = 1; // например "мед", "цветочный" — id из справочника
+  int32 intensity = 2;      // 1–5
+}
+
+message Session {
+  string id = 1;
+  string tea_id = 2;
+  string user_id = 3;  // пока строка, позже связь с auth
+  BrewingParams params = 4;
+  repeated DescriptorScore aroma_descriptors = 5;
+  repeated DescriptorScore taste_descriptors = 6;
+  string notes = 7;    // произвольные заметки текстом
+  google.protobuf.Timestamp session_at = 8;  // когда было чаепитие
+}
+
+message CreateSessionRequest {
+  string tea_id = 1;
+  string user_id = 2;
+  BrewingParams params = 3;
+  repeated DescriptorScore descriptors = 4;
+  string notes = 5;
+  google.protobuf.Timestamp session_at = 6;  // когда было чаепитие; если пусто — считаем "сейчас"
+}
+
+message CreateSessionResponse {
+  Session session = 1;
+}
+
+message GetSessionRequest {
+  string session_id = 1;
+}
+
+message GetSessionResponse {
+  Session session = 1;
+}
+
+message ListSessionsRequest {
+  // позже: user_id, tea_id, limit, offset
+  int32 limit = 1;
+  int32 offset = 2;
+}
+
+message ListSessionsResponse {
+  repeated Session sessions = 1;
+}
