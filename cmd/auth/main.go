@@ -37,8 +37,13 @@ func main() {
 		log.Fatalf("listen: %v", err)
 	}
 
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "dev-secret-change-in-production"
+	}
+
 	srv := grpc.NewServer()
-	authServer := auth.NewServer(pool)
+	authServer := auth.NewServer(pool, jwtSecret)
 	authv1.RegisterAuthServiceServer(srv, authServer)
 	reflection.Register(srv)
 

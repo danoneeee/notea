@@ -15,11 +15,12 @@ import (
 
 type Server struct {
 	authv1.UnimplementedAuthServiceServer
-	pool *pgxpool.Pool
+	pool      *pgxpool.Pool
+	jwtSecret string
 }
 
-func NewServer(pool *pgxpool.Pool) *Server {
-	return &Server{pool: pool}
+func NewServer(pool *pgxpool.Pool, jwtSecret string) *Server {
+	return &Server{pool: pool, jwtSecret: jwtSecret}
 }
 
 func (s *Server) Register(ctx context.Context, req *authv1.RegisterRequest) (*authv1.RegisterResponse, error) {
@@ -46,14 +47,19 @@ func (s *Server) Register(ctx context.Context, req *authv1.RegisterRequest) (*au
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	accessToken, refreshToken, err := Issue(s.jwtSecret, id)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	return &authv1.RegisterResponse{
 		User: &authv1.User{
 			Id:          id,
 			Email:       req.GetEmail(),
 			DisplayName: req.GetDisplayName(),
 		},
-		AccessToken:  "todo",
-		RefreshToken: "todo",
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 	}, nil
 }
 
@@ -62,5 +68,9 @@ func (s *Server) Login(ctx context.Context, req *authv1.LoginRequest) (*authv1.L
 }
 
 func (s *Server) Validate(ctx context.Context, req *authv1.ValidateRequest) (*authv1.ValidateResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "Validate not implemented yet")
+	userID, err := ValidateToken(s.jwtSecret, req.GetAccessToken())
+	if err != nil {
+		return &authv1.ValidateResponse{Ok: false}, nil
+	}
+	return &authv1.ValidateResponse{UserId: userID, Ok: true}, nil
 }
