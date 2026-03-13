@@ -19,10 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	TeaNotesService_CreateSession_FullMethodName = "/teanotes.v1.TeaNotesService/CreateSession"
-	TeaNotesService_GetSession_FullMethodName    = "/teanotes.v1.TeaNotesService/GetSession"
-	TeaNotesService_ListSessions_FullMethodName  = "/teanotes.v1.TeaNotesService/ListSessions"
-	TeaNotesService_ListTeas_FullMethodName      = "/teanotes.v1.TeaNotesService/ListTeas"
+	TeaNotesService_CreateSession_FullMethodName            = "/teanotes.v1.TeaNotesService/CreateSession"
+	TeaNotesService_GetSession_FullMethodName               = "/teanotes.v1.TeaNotesService/GetSession"
+	TeaNotesService_ListSessions_FullMethodName             = "/teanotes.v1.TeaNotesService/ListSessions"
+	TeaNotesService_ListTeas_FullMethodName                 = "/teanotes.v1.TeaNotesService/ListTeas"
+	TeaNotesService_ListDescriptorCategories_FullMethodName = "/teanotes.v1.TeaNotesService/ListDescriptorCategories"
 )
 
 // TeaNotesServiceClient is the client API for TeaNotesService service.
@@ -39,6 +40,7 @@ type TeaNotesServiceClient interface {
 	ListSessions(ctx context.Context, in *ListSessionsRequest, opts ...grpc.CallOption) (*ListSessionsResponse, error)
 	// Справочник чаёв: сорт + провинция.
 	ListTeas(ctx context.Context, in *ListTeasRequest, opts ...grpc.CallOption) (*ListTeasResponse, error)
+	ListDescriptorCategories(ctx context.Context, in *ListDescriptorCategoriesRequest, opts ...grpc.CallOption) (*ListDescriptorCategoriesResponse, error)
 }
 
 type teaNotesServiceClient struct {
@@ -89,6 +91,16 @@ func (c *teaNotesServiceClient) ListTeas(ctx context.Context, in *ListTeasReques
 	return out, nil
 }
 
+func (c *teaNotesServiceClient) ListDescriptorCategories(ctx context.Context, in *ListDescriptorCategoriesRequest, opts ...grpc.CallOption) (*ListDescriptorCategoriesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListDescriptorCategoriesResponse)
+	err := c.cc.Invoke(ctx, TeaNotesService_ListDescriptorCategories_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TeaNotesServiceServer is the server API for TeaNotesService service.
 // All implementations must embed UnimplementedTeaNotesServiceServer
 // for forward compatibility.
@@ -103,6 +115,7 @@ type TeaNotesServiceServer interface {
 	ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error)
 	// Справочник чаёв: сорт + провинция.
 	ListTeas(context.Context, *ListTeasRequest) (*ListTeasResponse, error)
+	ListDescriptorCategories(context.Context, *ListDescriptorCategoriesRequest) (*ListDescriptorCategoriesResponse, error)
 	mustEmbedUnimplementedTeaNotesServiceServer()
 }
 
@@ -124,6 +137,9 @@ func (UnimplementedTeaNotesServiceServer) ListSessions(context.Context, *ListSes
 }
 func (UnimplementedTeaNotesServiceServer) ListTeas(context.Context, *ListTeasRequest) (*ListTeasResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListTeas not implemented")
+}
+func (UnimplementedTeaNotesServiceServer) ListDescriptorCategories(context.Context, *ListDescriptorCategoriesRequest) (*ListDescriptorCategoriesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListDescriptorCategories not implemented")
 }
 func (UnimplementedTeaNotesServiceServer) mustEmbedUnimplementedTeaNotesServiceServer() {}
 func (UnimplementedTeaNotesServiceServer) testEmbeddedByValue()                         {}
@@ -218,6 +234,24 @@ func _TeaNotesService_ListTeas_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TeaNotesService_ListDescriptorCategories_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListDescriptorCategoriesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TeaNotesServiceServer).ListDescriptorCategories(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TeaNotesService_ListDescriptorCategories_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TeaNotesServiceServer).ListDescriptorCategories(ctx, req.(*ListDescriptorCategoriesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TeaNotesService_ServiceDesc is the grpc.ServiceDesc for TeaNotesService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -240,6 +274,10 @@ var TeaNotesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListTeas",
 			Handler:    _TeaNotesService_ListTeas_Handler,
+		},
+		{
+			MethodName: "ListDescriptorCategories",
+			Handler:    _TeaNotesService_ListDescriptorCategories_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -64,7 +64,36 @@ func (s *Server) Register(ctx context.Context, req *authv1.RegisterRequest) (*au
 }
 
 func (s *Server) Login(ctx context.Context, req *authv1.LoginRequest) (*authv1.LoginResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "Login not implemented yet")
+	var id, passwordHash, displayName string
+	err := s.pool.QueryRow(ctx,
+		`SELECT id::text, password_hash, display_name FROM users WHERE email = $1`,
+		req.GetEmail(),
+	).Scan(&id, &passwordHash, &displayName)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, status.Error(codes.NotFound, "user not found")
+	}
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(req.GetPassword())); err != nil {
+		return nil, status.Error(codes.Unauthenticated, "wrong password")
+	}
+
+	accessToken, refreshToken, err := Issue(s.jwtSecret, id)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &authv1.LoginResponse{
+		User: &authv1.User{
+			Id:          id,
+			Email:       req.GetEmail(),
+			DisplayName: displayName,
+		},
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
 }
 
 func (s *Server) Validate(ctx context.Context, req *authv1.ValidateRequest) (*authv1.ValidateResponse, error) {

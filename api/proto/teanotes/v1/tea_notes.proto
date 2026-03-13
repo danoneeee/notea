@@ -70,7 +70,7 @@ message ListDescriptorCategoriesRequest {
 }
 
 message ListDescriptorCategoriesResponse {
-  repeated Descriptor category = 1;
+  repeated DescriptorCategory categories = 1;
 }
 
 // ---- Сессия заваривания ----
@@ -102,9 +102,10 @@ message CreateSessionRequest {
   string tea_id = 1;
   string user_id = 2;
   BrewingParams params = 3;
-  repeated DescriptorScore descriptors = 4;
-  string notes = 5;
-  google.protobuf.Timestamp session_at = 6;  // когда было чаепитие; если пусто — считаем "сейчас"
+  repeated DescriptorScore aroma_descriptors = 4;
+  repeated DescriptorScore taste_descriptors = 5;
+  string notes = 6;
+  google.protobuf.Timestamp session_at = 7;
 }
 
 message CreateSessionResponse {
