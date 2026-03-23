@@ -18,5 +18,19 @@ go.work
 .DS_Store
 Thumbs.db
 
+docs/
+
+# Node / npm (root)
+/node_modules/
+/package.json
+/package-lock.json
+
+# Web build + deps
+/web/node_modules/
+/web/dist/
+
+# Local notes/dumps (для себя)
+/notes
+/notes/
 *.notes.txt
-/NOTES*
+

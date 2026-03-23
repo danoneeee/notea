@@ -42,8 +42,6 @@ func (s *Server) ListTeas(ctx context.Context, req *teanotesv1.ListTeasRequest) 
 }
 
 func (s *Server) ListDescriptorCategories(ctx context.Context, req *teanotesv1.ListDescriptorCategoriesRequest) (*teanotesv1.ListDescriptorCategoriesResponse, error) {
-	// Пока фиксированные данные в коде не подгружаем — пустой список.
 	return &teanotesv1.ListDescriptorCategoriesResponse{Categories: []*teanotesv1.DescriptorCategory{}}, nil
 }
 
-// CreateSession, GetSession, ListSessions пока не реализованы — используется встроенный Unimplemented.
