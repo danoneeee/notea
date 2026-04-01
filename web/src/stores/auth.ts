@@ -64,6 +64,10 @@ async function initialize() {
     return;
   }
 
+  if (state.accessToken.startsWith('demo:')) {
+    return;
+  }
+
   try {
     const res = await authService.validate(state.accessToken);
     if (!res.ok) {
@@ -104,6 +108,15 @@ async function register(displayName: string, email: string, password: string) {
   }
 }
 
+function loginDemo() {
+  setSession({
+    accessToken: `demo:${Date.now()}`,
+    refreshToken: '',
+    userName: 'Demo',
+    userId: 'demo',
+  });
+}
+
 function logout() {
   state.accessToken = null;
   state.refreshToken = null;
@@ -119,6 +132,7 @@ export function useAuthStore() {
     initialize,
     login,
     register,
+    loginDemo,
     logout,
   };
 }

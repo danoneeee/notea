@@ -10,20 +10,48 @@ type Descriptor = {
 const props = defineProps<{
   descriptors: Descriptor[];
   selectedIds: string[];
+  /** 0..1 насыщенность по id семейства: блеклый → цвет; если передан, заливка heatmap вместо selected. */
+  segmentIntensity?: Record<string, number>;
   centerLabel?: string;
+  centerSubLabel?: string;
+  centerClickable?: boolean;
   expandingId?: string | null;
   fadeOthers?: boolean;
-  subMode?: boolean;
+  zoomLevel?: number;
   previewSubcategories?: Record<string, string[]>;
   showSubPreview?: boolean;
 }>();
 
 const emit = defineEmits<{
   toggle: [id: string];
+  centerClick: [];
 }>();
 
 function isSelected(id: string) {
   return props.selectedIds.includes(id);
+}
+
+function heatMixWhitePct(id: string): string {
+  const raw = props.segmentIntensity?.[id] ?? 0;
+  const t = Math.min(1, Math.max(0, raw));
+  // Не встречались (t≈0) — почти серо-белые «призраки»; насыщение нарастает нелинейно.
+  const curved = Math.pow(t, 1.2);
+  const pct = Math.round(98 - curved * 92);
+  return `${Math.min(98, Math.max(4, pct))}%`;
+}
+
+/** Цвет и плотность подписи по той же шкале, что и заливка сегмента */
+function labelHeatStyle(id: string): Record<string, string> {
+  const raw = props.segmentIntensity?.[id] ?? 0;
+  const t = Math.min(1, Math.max(0, raw));
+  const curved = Math.pow(t, 1.15);
+  const faint = '#bcc8c0';
+  const strong = '#0d2818';
+  return {
+    fill: `color-mix(in srgb, ${strong} ${(curved * 100).toFixed(1)}%, ${faint})`,
+    opacity: String(0.38 + curved * 0.62),
+    fontWeight: curved > 0.22 ? '800' : '600',
+  };
 }
 
 const hoveredId = ref<string | null>(null);
@@ -107,41 +135,75 @@ const previewSegment = computed(() => {
     items,
   };
 });
+
+const wheelScale = computed(() => {
+  const level = Math.min(2, Math.max(0, props.zoomLevel ?? 0));
+  return 1 + level * 0.1;
+});
+
+const segmentRenderKey = computed(() => props.descriptors.map((segment) => segment.id).join('|'));
 </script>
 
 <template>
   <div class="wheel-wrap">
-    <svg class="wheel" :viewBox="`0 0 ${size} ${size}`" role="img" aria-label="Круг дескрипторов">
-      <g
-        v-for="segment in segments"
-        :key="segment.id"
-        class="segment-group"
-        :class="{
-          'is-expanding': props.expandingId === segment.id,
-          'is-faded': props.fadeOthers && props.expandingId && props.expandingId !== segment.id,
-          'is-sub-mode': props.subMode,
-        }"
-        @mouseenter="setHovered(segment.id)"
-        @mouseleave="setHovered(null)"
-      >
-        <path
-          class="segment"
-          :class="{ selected: isSelected(segment.id) }"
-          :d="segment.path"
-          :style="{ '--segment-color': segment.color }"
-          @click="emit('toggle', segment.id)"
-        />
-        <text
-          class="segment-label"
-          :x="segment.labelX"
-          :y="segment.labelY"
-          :transform="`rotate(${segment.textRotation} ${segment.labelX} ${segment.labelY})`"
+    <svg
+      class="wheel"
+      :viewBox="`0 0 ${size} ${size}`"
+      :style="{ '--wheel-scale': String(wheelScale) }"
+      role="img"
+      aria-label="Круг дескрипторов"
+    >
+      <circle class="halo-ring" :cx="center" :cy="center" :r="outerRadius + 10" />
+      <transition-group :key="segmentRenderKey" name="segment-swap" tag="g">
+        <g
+          v-for="segment in segments"
+          :key="segment.id"
+          class="segment-group"
+          :class="{
+            'is-expanding': props.expandingId === segment.id,
+            'is-faded': props.fadeOthers && props.expandingId && props.expandingId !== segment.id,
+          }"
+          @mouseenter="setHovered(segment.id)"
+          @mouseleave="setHovered(null)"
         >
-          {{ segment.label }}
+          <path
+            class="segment"
+            :class="{
+              selected: isSelected(segment.id) && !props.segmentIntensity,
+              heat: !!props.segmentIntensity,
+            }"
+            :d="segment.path"
+            :style="{
+              '--segment-color': segment.color,
+              '--heat-white': props.segmentIntensity ? heatMixWhitePct(segment.id) : undefined,
+            }"
+            @click="emit('toggle', segment.id)"
+          />
+          <text
+            class="segment-label"
+            :style="props.segmentIntensity ? labelHeatStyle(segment.id) : undefined"
+            :x="segment.labelX"
+            :y="segment.labelY"
+            :transform="`rotate(${segment.textRotation} ${segment.labelX} ${segment.labelY})`"
+          >
+            {{ segment.label }}
+          </text>
+        </g>
+      </transition-group>
+      <g
+        class="center-action"
+        :class="{ clickable: props.centerClickable }"
+        @click="props.centerClickable ? emit('centerClick') : undefined"
+      >
+        <circle class="center-shadow" :cx="center" :cy="center" :r="innerRadius - 2" />
+        <circle class="center-circle" :cx="center" :cy="center" :r="innerRadius - 8" />
+        <text class="center-label" :x="center" :y="center - (props.centerSubLabel ? 8 : 0)">
+          {{ props.centerLabel ?? 'ВКУС' }}
+        </text>
+        <text v-if="props.centerSubLabel" class="center-sublabel" :x="center" :y="center + 18">
+          {{ props.centerSubLabel }}
         </text>
       </g>
-      <circle class="center-circle" :cx="center" :cy="center" :r="innerRadius - 8" />
-      <text class="center-label" :x="center" :y="center + 4">{{ props.centerLabel ?? 'ВКУС' }}</text>
     </svg>
     <div
       v-if="previewSegment"
@@ -167,21 +229,24 @@ const previewSegment = computed(() => {
   width: min(560px, 100%);
   height: auto;
   overflow: visible;
-  transition: transform 0.2s ease;
+  transform: scale(var(--wheel-scale, 1));
+  transform-origin: center;
+  transition: transform 0.28s ease-in-out;
 }
 
-.is-sub-mode {
-  transform: scale(0.93);
-  transform-origin: center;
+.halo-ring {
+  fill: none;
+  stroke: rgba(163, 190, 166, 0.28);
+  stroke-width: 10;
 }
 
 .segment-group {
-  transition: opacity 0.2s ease, transform 0.22s ease;
+  transition: opacity 0.22s ease-in-out, transform 0.24s ease-in-out;
   transform-origin: center;
 }
 
 .segment-group.is-expanding {
-  transform: scale(1.06);
+  transform: scale(1.14);
 }
 
 .segment-group.is-faded {
@@ -190,25 +255,38 @@ const previewSegment = computed(() => {
 
 .segment {
   fill: color-mix(in srgb, var(--segment-color), white 58%);
-  stroke: #ffffff;
-  stroke-width: 2;
+  stroke: rgba(255, 255, 255, 0.96);
+  stroke-width: 2.4;
   cursor: pointer;
-  transition: filter 0.12s ease, fill 0.12s ease;
+  transition: fill 0.18s ease-in-out, stroke-width 0.18s ease-in-out, opacity 0.18s ease-in-out;
 }
 
-.segment:hover {
-  filter: brightness(1.04);
-  fill: color-mix(in srgb, var(--segment-color), white 42%);
+.segment.heat {
+  fill: color-mix(in srgb, var(--segment-color), white var(--heat-white, 98%));
+  transition: fill 0.32s ease-in-out, opacity 0.2s ease-in-out;
+}
+
+.segment:not(.heat):hover {
+  fill: color-mix(in srgb, var(--segment-color), white 40%);
+}
+
+.segment.heat:hover {
+  opacity: 0.94;
 }
 
 .segment-group:hover {
-  transform: scale(1.04);
+  transform: scale(1.025);
 }
 
 .selected {
-  fill: color-mix(in srgb, var(--segment-color), white 26%);
+  fill: color-mix(in srgb, var(--segment-color), white 18%);
   stroke: #ffffff;
-  stroke-width: 2;
+  stroke-width: 2.8;
+}
+
+.segment.heat.selected {
+  /* в режиме heat не используем .selected */
+  fill: color-mix(in srgb, var(--segment-color), white var(--heat-white, 98%));
 }
 
 .segment-label {
@@ -218,12 +296,32 @@ const previewSegment = computed(() => {
   text-anchor: middle;
   dominant-baseline: middle;
   pointer-events: none;
+  transition: fill 0.4s ease, opacity 0.4s ease, font-weight 0.25s ease;
+  letter-spacing: 0.01em;
+}
+
+.center-action {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.18s ease-in-out;
+}
+
+.center-action.clickable {
+  cursor: pointer;
+}
+
+.center-action.clickable:hover {
+  transform: scale(1.018);
+}
+
+.center-shadow {
+  fill: rgba(47, 123, 61, 0.08);
 }
 
 .center-circle {
   fill: #ffffff;
   stroke: #d8e5d5;
-  stroke-width: 1.5;
+  stroke-width: 1.8;
 }
 
 .center-label {
@@ -235,15 +333,24 @@ const previewSegment = computed(() => {
   dominant-baseline: middle;
 }
 
+.center-sublabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  fill: #78917d;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
 .preview {
   position: absolute;
   transform: translate(-50%, -50%);
-  min-width: 140px;
-  max-width: 180px;
+  min-width: 170px;
+  max-width: 220px;
   background: #ffffff;
   border: 1px solid #d9e7d6;
   border-radius: 10px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   box-shadow: 0 8px 22px rgba(35, 58, 39, 0.12);
   z-index: 5;
   pointer-events: none;
@@ -262,5 +369,17 @@ const previewSegment = computed(() => {
   color: #3e6045;
   font-size: 12px;
   line-height: 1.35;
+}
+
+.segment-swap-enter-active,
+.segment-swap-leave-active {
+  transition: opacity 0.22s ease-in-out, transform 0.22s ease-in-out;
+  transform-origin: center;
+}
+
+.segment-swap-enter-from,
+.segment-swap-leave-to {
+  opacity: 0;
+  transform: scale(0.94);
 }
 </style>

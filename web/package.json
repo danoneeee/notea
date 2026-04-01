@@ -12,6 +12,8 @@
     "@bufbuild/connect": "^0.13.0",
     "@bufbuild/connect-web": "^0.13.0",
     "@bufbuild/protobuf": "^1.10.0",
+    "china-map-geojson": "^1.0.4",
+    "echarts": "^6.0.0",
     "vue": "^3.4.0",
     "vue-router": "^5.0.4"
   },

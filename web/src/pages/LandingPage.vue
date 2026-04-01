@@ -1,61 +1,26 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import AuthModal from '../components/AuthModal.vue';
 import { useAuthStore } from '../stores/auth';
-import { listTeas } from '../services/tea';
 
 const router = useRouter();
 const auth = useAuthStore();
 const showAuth = ref(false);
-const teas = ref<Array<{ id: string; name: string; province: string; variant: string }>>([]);
-const teasLoading = ref(false);
-const teasError = ref<string | null>(null);
-
-const isAuthenticated = computed(() => auth.isAuthenticated.value);
+const isDev = import.meta.env.DEV;
 
 function openAuth() {
   showAuth.value = true;
 }
 
+function loginDemo() {
+  auth.loginDemo();
+  router.push('/app/notes');
+}
+
 function onAuthSuccess() {
-  loadTeas();
+  router.push('/app/notes');
 }
-
-function goToNewNote() {
-  router.push('/notes/new');
-}
-
-function logout() {
-  auth.logout();
-  teas.value = [];
-  teasError.value = null;
-}
-
-async function loadTeas() {
-  if (!isAuthenticated.value) {
-    return;
-  }
-  teasLoading.value = true;
-  teasError.value = null;
-  try {
-    teas.value = await listTeas();
-  } catch (e: unknown) {
-    teasError.value = e instanceof Error ? e.message : String(e);
-  } finally {
-    teasLoading.value = false;
-  }
-}
-
-onMounted(() => {
-  loadTeas();
-});
-
-watch(isAuthenticated, (next) => {
-  if (next) {
-    loadTeas();
-  }
-});
 </script>
 
 <template>
@@ -63,14 +28,8 @@ watch(isAuthenticated, (next) => {
     <header class="header">
       <div class="brand">Notea</div>
       <div class="header-actions">
-        <template v-if="!isAuthenticated">
-          <button class="btn btn-primary" @click="openAuth">Войти / Регистрация</button>
-        </template>
-        <template v-else>
-          <span class="welcome">Привет, {{ auth.state.userName }}</span>
-          <button class="btn btn-primary" @click="goToNewNote">Новая заметка</button>
-          <button class="btn btn-ghost" @click="logout">Выйти</button>
-        </template>
+        <button class="btn btn-primary" @click="openAuth">Войти / Регистрация</button>
+        <button v-if="isDev" class="btn btn-ghost" @click="loginDemo">Демо-вход</button>
       </div>
     </header>
 
@@ -82,8 +41,7 @@ watch(isAuthenticated, (next) => {
         осознанной.
       </p>
       <div class="hero-actions">
-        <button v-if="!isAuthenticated" class="btn btn-primary" @click="openAuth">Начать бесплатно</button>
-        <button v-else class="btn btn-primary" @click="goToNewNote">Создать заметку</button>
+        <button class="btn btn-primary" @click="openAuth">Начать бесплатно</button>
       </div>
     </section>
 
@@ -100,19 +58,6 @@ watch(isAuthenticated, (next) => {
         <h2>Личное пространство</h2>
         <p>Твои данные и твои предпочтения, доступные после авторизации.</p>
       </article>
-    </section>
-
-    <section v-if="isAuthenticated" class="content">
-      <h2>Мои заметки и коллекция</h2>
-      <p class="subtitle">Все в одном месте: от списка чаев до создания новой заметки.</p>
-      <p v-if="teasLoading">Загружаем...</p>
-      <p v-else-if="teasError" class="status status-error">{{ teasError }}</p>
-      <ul v-else class="list">
-        <li v-for="t in teas" :key="t.id">
-          <strong>{{ t.name }}</strong> ({{ t.province }}) — {{ t.variant }}
-        </li>
-      </ul>
-      <p v-if="!teasLoading && !teasError && teas.length === 0" class="empty">Пока нет записей по чаям.</p>
     </section>
 
     <AuthModal v-model="showAuth" @success="onAuthSuccess" />
@@ -147,11 +92,6 @@ watch(isAuthenticated, (next) => {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.welcome {
-  color: #39523a;
-  font-size: 14px;
 }
 
 .hero {
@@ -214,43 +154,6 @@ watch(isAuthenticated, (next) => {
 .feature-card p {
   margin: 0;
   color: #4a624c;
-}
-
-.content {
-  max-width: 1080px;
-  margin: 24px auto 0;
-  background: #fff;
-  border: 1px solid #deead8;
-  border-radius: 16px;
-  padding: 20px;
-}
-
-.subtitle {
-  margin: 0 0 8px;
-  color: #4b6350;
-}
-
-.list {
-  margin: 0;
-  padding-left: 20px;
-  line-height: 1.7;
-}
-
-.empty {
-  color: #607963;
-}
-
-.status {
-  margin-top: 12px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 14px;
-}
-
-.status-error {
-  background: #fdecee;
-  color: #992b3f;
-  border: 1px solid #f4c4cc;
 }
 
 .btn {
