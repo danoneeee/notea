@@ -249,9 +249,25 @@ onBeforeUnmount(() => {
 <template>
   <div class="map-wrap">
     <div ref="containerRef" class="map-canvas" />
-    <p class="hint">
-      Карта показывает провинции Китая. Чем ярче зелёный цвет, тем больше чая из этого региона ты пил.
-    </p>
+    <div class="map-caption">
+      <div class="map-legend" aria-label="Легенда карты">
+        <span class="legend-item">
+          <i class="legend-swatch light" />
+          Светлый тон: единичные заметки
+        </span>
+        <span class="legend-item">
+          <i class="legend-swatch mid" />
+          Средний тон: устойчивый интерес
+        </span>
+        <span class="legend-item">
+          <i class="legend-swatch strong" />
+          Насыщенный тон: регион-лидер
+        </span>
+      </div>
+      <p class="hint">
+        Провинции без данных остаются почти нейтральными. Наведи курсор на область карты, чтобы увидеть точное число заметок.
+      </p>
+    </div>
   </div>
 </template>
 
@@ -261,18 +277,88 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 8px;
   width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  min-width: 0;
+  box-sizing: border-box;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .map-canvas {
   width: 100%;
-  min-height: 560px;
+  max-width: 100%;
+  min-height: 460px;
+  display: block;
   border-radius: 12px;
   background: linear-gradient(180deg, #f7fbf5 0%, #f1f8ee 100%);
+  contain: layout paint;
+  overflow: hidden;
+}
+
+.map-caption {
+  display: grid;
+  gap: 8px;
+  padding: 2px 0 0;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.map-canvas :deep(canvas) {
+  display: block;
+  max-width: 100%;
+}
+
+.map-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #e0ecdd;
+  color: #47614d;
+  font-size: 12px;
+  line-height: 1.35;
+  min-width: 0;
+}
+
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  flex: 0 0 14px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6), 0 0 0 1px rgba(90,120,95,0.12);
+}
+
+.legend-swatch.light {
+  background: #eef7ed;
+}
+
+.legend-swatch.mid {
+  background: #8fd28f;
+}
+
+.legend-swatch.strong {
+  background: #2f9a48;
 }
 
 @media (max-width: 860px) {
   .map-canvas {
-    min-height: 420px;
+    min-height: 360px;
+  }
+}
+
+@media (max-width: 640px) {
+  .map-canvas {
+    min-height: 320px;
   }
 }
 
