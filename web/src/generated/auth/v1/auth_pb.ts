@@ -325,3 +325,83 @@ export class ValidateResponse extends Message<ValidateResponse> {
   }
 }
 
+/**
+ * @generated from message auth.v1.RefreshSessionRequest
+ */
+export class RefreshSessionRequest extends Message<RefreshSessionRequest> {
+  /**
+   * @generated from field: string refresh_token = 1;
+   */
+  refreshToken = "";
+
+  constructor(data?: PartialMessage<RefreshSessionRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.RefreshSessionRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "refresh_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RefreshSessionRequest {
+    return new RefreshSessionRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RefreshSessionRequest {
+    return new RefreshSessionRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RefreshSessionRequest {
+    return new RefreshSessionRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RefreshSessionRequest | PlainMessage<RefreshSessionRequest> | undefined, b: RefreshSessionRequest | PlainMessage<RefreshSessionRequest> | undefined): boolean {
+    return proto3.util.equals(RefreshSessionRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message auth.v1.RefreshSessionResponse
+ */
+export class RefreshSessionResponse extends Message<RefreshSessionResponse> {
+  /**
+   * @generated from field: string access_token = 1;
+   */
+  accessToken = "";
+
+  /**
+   * @generated from field: string refresh_token = 2;
+   */
+  refreshToken = "";
+
+  constructor(data?: PartialMessage<RefreshSessionResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "auth.v1.RefreshSessionResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "access_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "refresh_token", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RefreshSessionResponse {
+    return new RefreshSessionResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RefreshSessionResponse {
+    return new RefreshSessionResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RefreshSessionResponse {
+    return new RefreshSessionResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RefreshSessionResponse | PlainMessage<RefreshSessionResponse> | undefined, b: RefreshSessionResponse | PlainMessage<RefreshSessionResponse> | undefined): boolean {
+    return proto3.util.equals(RefreshSessionResponse, a, b);
+  }
+}
+

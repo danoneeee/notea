@@ -1032,6 +1032,718 @@ func (x *ListSessionsResponse) GetSessions() []*Session {
 	return nil
 }
 
+type NoteRatingsMsg struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Aroma         int32                  `protobuf:"varint,1,opt,name=aroma,proto3" json:"aroma,omitempty"`
+	Taste         int32                  `protobuf:"varint,2,opt,name=taste,proto3" json:"taste,omitempty"`
+	Aftertaste    int32                  `protobuf:"varint,3,opt,name=aftertaste,proto3" json:"aftertaste,omitempty"`
+	Balance       int32                  `protobuf:"varint,4,opt,name=balance,proto3" json:"balance,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NoteRatingsMsg) Reset() {
+	*x = NoteRatingsMsg{}
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NoteRatingsMsg) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NoteRatingsMsg) ProtoMessage() {}
+
+func (x *NoteRatingsMsg) ProtoReflect() protoreflect.Message {
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NoteRatingsMsg.ProtoReflect.Descriptor instead.
+func (*NoteRatingsMsg) Descriptor() ([]byte, []int) {
+	return file_teanotes_v1_tea_notes_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *NoteRatingsMsg) GetAroma() int32 {
+	if x != nil {
+		return x.Aroma
+	}
+	return 0
+}
+
+func (x *NoteRatingsMsg) GetTaste() int32 {
+	if x != nil {
+		return x.Taste
+	}
+	return 0
+}
+
+func (x *NoteRatingsMsg) GetAftertaste() int32 {
+	if x != nil {
+		return x.Aftertaste
+	}
+	return 0
+}
+
+func (x *NoteRatingsMsg) GetBalance() int32 {
+	if x != nil {
+		return x.Balance
+	}
+	return 0
+}
+
+type TeaNote struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	SessionTitle    *string                `protobuf:"bytes,2,opt,name=session_title,json=sessionTitle,proto3,oneof" json:"session_title,omitempty"`
+	TeaName         string                 `protobuf:"bytes,3,opt,name=tea_name,json=teaName,proto3" json:"tea_name,omitempty"`
+	TeaType         string                 `protobuf:"bytes,4,opt,name=tea_type,json=teaType,proto3" json:"tea_type,omitempty"`
+	Region          string                 `protobuf:"bytes,5,opt,name=region,proto3" json:"region,omitempty"`
+	OriginDetail    *string                `protobuf:"bytes,6,opt,name=origin_detail,json=originDetail,proto3,oneof" json:"origin_detail,omitempty"`
+	Cultivar        *string                `protobuf:"bytes,7,opt,name=cultivar,proto3,oneof" json:"cultivar,omitempty"`
+	Source          *string                `protobuf:"bytes,8,opt,name=source,proto3,oneof" json:"source,omitempty"`
+	ProcessingStyle *string                `protobuf:"bytes,9,opt,name=processing_style,json=processingStyle,proto3,oneof" json:"processing_style,omitempty"`
+	HarvestSeason   *string                `protobuf:"bytes,10,opt,name=harvest_season,json=harvestSeason,proto3,oneof" json:"harvest_season,omitempty"`
+	HarvestYear     *int32                 `protobuf:"varint,11,opt,name=harvest_year,json=harvestYear,proto3,oneof" json:"harvest_year,omitempty"`
+	SkippedFields   []string               `protobuf:"bytes,12,rep,name=skipped_fields,json=skippedFields,proto3" json:"skipped_fields,omitempty"`
+	BrewingMode     string                 `protobuf:"bytes,13,opt,name=brewing_mode,json=brewingMode,proto3" json:"brewing_mode,omitempty"`
+	BrewingMethod   string                 `protobuf:"bytes,14,opt,name=brewing_method,json=brewingMethod,proto3" json:"brewing_method,omitempty"`
+	WaterSource     *string                `protobuf:"bytes,15,opt,name=water_source,json=waterSource,proto3,oneof" json:"water_source,omitempty"`
+	SetupId         *string                `protobuf:"bytes,16,opt,name=setup_id,json=setupId,proto3,oneof" json:"setup_id,omitempty"`
+	SetupSummary    string                 `protobuf:"bytes,17,opt,name=setup_summary,json=setupSummary,proto3" json:"setup_summary,omitempty"`
+	LeafGrams       *float64               `protobuf:"fixed64,18,opt,name=leaf_grams,json=leafGrams,proto3,oneof" json:"leaf_grams,omitempty"`
+	WaterTemp       *int32                 `protobuf:"varint,19,opt,name=water_temp,json=waterTemp,proto3,oneof" json:"water_temp,omitempty"`
+	WaterVolumeMl   *int32                 `protobuf:"varint,20,opt,name=water_volume_ml,json=waterVolumeMl,proto3,oneof" json:"water_volume_ml,omitempty"`
+	RinseCount      *int32                 `protobuf:"varint,21,opt,name=rinse_count,json=rinseCount,proto3,oneof" json:"rinse_count,omitempty"`
+	InfusionsCount  *int32                 `protobuf:"varint,22,opt,name=infusions_count,json=infusionsCount,proto3,oneof" json:"infusions_count,omitempty"`
+	TimeValue       *float64               `protobuf:"fixed64,23,opt,name=time_value,json=timeValue,proto3,oneof" json:"time_value,omitempty"`
+	TimeUnit        string                 `protobuf:"bytes,24,opt,name=time_unit,json=timeUnit,proto3" json:"time_unit,omitempty"`
+	Descriptors     []string               `protobuf:"bytes,25,rep,name=descriptors,proto3" json:"descriptors,omitempty"`
+	LiquorColor     *string                `protobuf:"bytes,26,opt,name=liquor_color,json=liquorColor,proto3,oneof" json:"liquor_color,omitempty"`
+	Mouthfeel       *string                `protobuf:"bytes,27,opt,name=mouthfeel,proto3,oneof" json:"mouthfeel,omitempty"`
+	EnergyEffect    *string                `protobuf:"bytes,28,opt,name=energy_effect,json=energyEffect,proto3,oneof" json:"energy_effect,omitempty"`
+	FreeText        string                 `protobuf:"bytes,29,opt,name=free_text,json=freeText,proto3" json:"free_text,omitempty"`
+	Ratings         *NoteRatingsMsg        `protobuf:"bytes,30,opt,name=ratings,proto3" json:"ratings,omitempty"`
+	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,31,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	NoteColor       *string                `protobuf:"bytes,32,opt,name=note_color,json=noteColor,proto3,oneof" json:"note_color,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *TeaNote) Reset() {
+	*x = TeaNote{}
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TeaNote) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TeaNote) ProtoMessage() {}
+
+func (x *TeaNote) ProtoReflect() protoreflect.Message {
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TeaNote.ProtoReflect.Descriptor instead.
+func (*TeaNote) Descriptor() ([]byte, []int) {
+	return file_teanotes_v1_tea_notes_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *TeaNote) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TeaNote) GetSessionTitle() string {
+	if x != nil && x.SessionTitle != nil {
+		return *x.SessionTitle
+	}
+	return ""
+}
+
+func (x *TeaNote) GetTeaName() string {
+	if x != nil {
+		return x.TeaName
+	}
+	return ""
+}
+
+func (x *TeaNote) GetTeaType() string {
+	if x != nil {
+		return x.TeaType
+	}
+	return ""
+}
+
+func (x *TeaNote) GetRegion() string {
+	if x != nil {
+		return x.Region
+	}
+	return ""
+}
+
+func (x *TeaNote) GetOriginDetail() string {
+	if x != nil && x.OriginDetail != nil {
+		return *x.OriginDetail
+	}
+	return ""
+}
+
+func (x *TeaNote) GetCultivar() string {
+	if x != nil && x.Cultivar != nil {
+		return *x.Cultivar
+	}
+	return ""
+}
+
+func (x *TeaNote) GetSource() string {
+	if x != nil && x.Source != nil {
+		return *x.Source
+	}
+	return ""
+}
+
+func (x *TeaNote) GetProcessingStyle() string {
+	if x != nil && x.ProcessingStyle != nil {
+		return *x.ProcessingStyle
+	}
+	return ""
+}
+
+func (x *TeaNote) GetHarvestSeason() string {
+	if x != nil && x.HarvestSeason != nil {
+		return *x.HarvestSeason
+	}
+	return ""
+}
+
+func (x *TeaNote) GetHarvestYear() int32 {
+	if x != nil && x.HarvestYear != nil {
+		return *x.HarvestYear
+	}
+	return 0
+}
+
+func (x *TeaNote) GetSkippedFields() []string {
+	if x != nil {
+		return x.SkippedFields
+	}
+	return nil
+}
+
+func (x *TeaNote) GetBrewingMode() string {
+	if x != nil {
+		return x.BrewingMode
+	}
+	return ""
+}
+
+func (x *TeaNote) GetBrewingMethod() string {
+	if x != nil {
+		return x.BrewingMethod
+	}
+	return ""
+}
+
+func (x *TeaNote) GetWaterSource() string {
+	if x != nil && x.WaterSource != nil {
+		return *x.WaterSource
+	}
+	return ""
+}
+
+func (x *TeaNote) GetSetupId() string {
+	if x != nil && x.SetupId != nil {
+		return *x.SetupId
+	}
+	return ""
+}
+
+func (x *TeaNote) GetSetupSummary() string {
+	if x != nil {
+		return x.SetupSummary
+	}
+	return ""
+}
+
+func (x *TeaNote) GetLeafGrams() float64 {
+	if x != nil && x.LeafGrams != nil {
+		return *x.LeafGrams
+	}
+	return 0
+}
+
+func (x *TeaNote) GetWaterTemp() int32 {
+	if x != nil && x.WaterTemp != nil {
+		return *x.WaterTemp
+	}
+	return 0
+}
+
+func (x *TeaNote) GetWaterVolumeMl() int32 {
+	if x != nil && x.WaterVolumeMl != nil {
+		return *x.WaterVolumeMl
+	}
+	return 0
+}
+
+func (x *TeaNote) GetRinseCount() int32 {
+	if x != nil && x.RinseCount != nil {
+		return *x.RinseCount
+	}
+	return 0
+}
+
+func (x *TeaNote) GetInfusionsCount() int32 {
+	if x != nil && x.InfusionsCount != nil {
+		return *x.InfusionsCount
+	}
+	return 0
+}
+
+func (x *TeaNote) GetTimeValue() float64 {
+	if x != nil && x.TimeValue != nil {
+		return *x.TimeValue
+	}
+	return 0
+}
+
+func (x *TeaNote) GetTimeUnit() string {
+	if x != nil {
+		return x.TimeUnit
+	}
+	return ""
+}
+
+func (x *TeaNote) GetDescriptors() []string {
+	if x != nil {
+		return x.Descriptors
+	}
+	return nil
+}
+
+func (x *TeaNote) GetLiquorColor() string {
+	if x != nil && x.LiquorColor != nil {
+		return *x.LiquorColor
+	}
+	return ""
+}
+
+func (x *TeaNote) GetMouthfeel() string {
+	if x != nil && x.Mouthfeel != nil {
+		return *x.Mouthfeel
+	}
+	return ""
+}
+
+func (x *TeaNote) GetEnergyEffect() string {
+	if x != nil && x.EnergyEffect != nil {
+		return *x.EnergyEffect
+	}
+	return ""
+}
+
+func (x *TeaNote) GetFreeText() string {
+	if x != nil {
+		return x.FreeText
+	}
+	return ""
+}
+
+func (x *TeaNote) GetRatings() *NoteRatingsMsg {
+	if x != nil {
+		return x.Ratings
+	}
+	return nil
+}
+
+func (x *TeaNote) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+func (x *TeaNote) GetNoteColor() string {
+	if x != nil && x.NoteColor != nil {
+		return *x.NoteColor
+	}
+	return ""
+}
+
+type UpsertTeaNoteRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Note          *TeaNote               `protobuf:"bytes,1,opt,name=note,proto3" json:"note,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpsertTeaNoteRequest) Reset() {
+	*x = UpsertTeaNoteRequest{}
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpsertTeaNoteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpsertTeaNoteRequest) ProtoMessage() {}
+
+func (x *UpsertTeaNoteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpsertTeaNoteRequest.ProtoReflect.Descriptor instead.
+func (*UpsertTeaNoteRequest) Descriptor() ([]byte, []int) {
+	return file_teanotes_v1_tea_notes_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *UpsertTeaNoteRequest) GetNote() *TeaNote {
+	if x != nil {
+		return x.Note
+	}
+	return nil
+}
+
+type UpsertTeaNoteResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Note          *TeaNote               `protobuf:"bytes,1,opt,name=note,proto3" json:"note,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpsertTeaNoteResponse) Reset() {
+	*x = UpsertTeaNoteResponse{}
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpsertTeaNoteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpsertTeaNoteResponse) ProtoMessage() {}
+
+func (x *UpsertTeaNoteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpsertTeaNoteResponse.ProtoReflect.Descriptor instead.
+func (*UpsertTeaNoteResponse) Descriptor() ([]byte, []int) {
+	return file_teanotes_v1_tea_notes_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *UpsertTeaNoteResponse) GetNote() *TeaNote {
+	if x != nil {
+		return x.Note
+	}
+	return nil
+}
+
+type GetTeaNoteRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NoteId        string                 `protobuf:"bytes,1,opt,name=note_id,json=noteId,proto3" json:"note_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTeaNoteRequest) Reset() {
+	*x = GetTeaNoteRequest{}
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTeaNoteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTeaNoteRequest) ProtoMessage() {}
+
+func (x *GetTeaNoteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTeaNoteRequest.ProtoReflect.Descriptor instead.
+func (*GetTeaNoteRequest) Descriptor() ([]byte, []int) {
+	return file_teanotes_v1_tea_notes_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *GetTeaNoteRequest) GetNoteId() string {
+	if x != nil {
+		return x.NoteId
+	}
+	return ""
+}
+
+type GetTeaNoteResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Note          *TeaNote               `protobuf:"bytes,1,opt,name=note,proto3" json:"note,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTeaNoteResponse) Reset() {
+	*x = GetTeaNoteResponse{}
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTeaNoteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTeaNoteResponse) ProtoMessage() {}
+
+func (x *GetTeaNoteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTeaNoteResponse.ProtoReflect.Descriptor instead.
+func (*GetTeaNoteResponse) Descriptor() ([]byte, []int) {
+	return file_teanotes_v1_tea_notes_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *GetTeaNoteResponse) GetNote() *TeaNote {
+	if x != nil {
+		return x.Note
+	}
+	return nil
+}
+
+type ListTeaNotesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset        int32                  `protobuf:"varint,2,opt,name=offset,proto3" json:"offset,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTeaNotesRequest) Reset() {
+	*x = ListTeaNotesRequest{}
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTeaNotesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTeaNotesRequest) ProtoMessage() {}
+
+func (x *ListTeaNotesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTeaNotesRequest.ProtoReflect.Descriptor instead.
+func (*ListTeaNotesRequest) Descriptor() ([]byte, []int) {
+	return file_teanotes_v1_tea_notes_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *ListTeaNotesRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListTeaNotesRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+type ListTeaNotesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Notes         []*TeaNote             `protobuf:"bytes,1,rep,name=notes,proto3" json:"notes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListTeaNotesResponse) Reset() {
+	*x = ListTeaNotesResponse{}
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListTeaNotesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListTeaNotesResponse) ProtoMessage() {}
+
+func (x *ListTeaNotesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListTeaNotesResponse.ProtoReflect.Descriptor instead.
+func (*ListTeaNotesResponse) Descriptor() ([]byte, []int) {
+	return file_teanotes_v1_tea_notes_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *ListTeaNotesResponse) GetNotes() []*TeaNote {
+	if x != nil {
+		return x.Notes
+	}
+	return nil
+}
+
+type DeleteTeaNoteRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NoteId        string                 `protobuf:"bytes,1,opt,name=note_id,json=noteId,proto3" json:"note_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteTeaNoteRequest) Reset() {
+	*x = DeleteTeaNoteRequest{}
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteTeaNoteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteTeaNoteRequest) ProtoMessage() {}
+
+func (x *DeleteTeaNoteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteTeaNoteRequest.ProtoReflect.Descriptor instead.
+func (*DeleteTeaNoteRequest) Descriptor() ([]byte, []int) {
+	return file_teanotes_v1_tea_notes_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *DeleteTeaNoteRequest) GetNoteId() string {
+	if x != nil {
+		return x.NoteId
+	}
+	return ""
+}
+
+type DeleteTeaNoteResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteTeaNoteResponse) Reset() {
+	*x = DeleteTeaNoteResponse{}
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteTeaNoteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteTeaNoteResponse) ProtoMessage() {}
+
+func (x *DeleteTeaNoteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_teanotes_v1_tea_notes_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteTeaNoteResponse.ProtoReflect.Descriptor instead.
+func (*DeleteTeaNoteResponse) Descriptor() ([]byte, []int) {
+	return file_teanotes_v1_tea_notes_proto_rawDescGZIP(), []int{26}
+}
+
 var File_teanotes_v1_tea_notes_proto protoreflect.FileDescriptor
 
 const file_teanotes_v1_tea_notes_proto_rawDesc = "" +
@@ -1102,19 +1814,108 @@ const file_teanotes_v1_tea_notes_proto_rawDesc = "" +
 	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12\x16\n" +
 	"\x06offset\x18\x02 \x01(\x05R\x06offset\"H\n" +
 	"\x14ListSessionsResponse\x120\n" +
-	"\bsessions\x18\x01 \x03(\v2\x14.teanotes.v1.SessionR\bsessions*\x81\x01\n" +
+	"\bsessions\x18\x01 \x03(\v2\x14.teanotes.v1.SessionR\bsessions\"v\n" +
+	"\x0eNoteRatingsMsg\x12\x14\n" +
+	"\x05aroma\x18\x01 \x01(\x05R\x05aroma\x12\x14\n" +
+	"\x05taste\x18\x02 \x01(\x05R\x05taste\x12\x1e\n" +
+	"\n" +
+	"aftertaste\x18\x03 \x01(\x05R\n" +
+	"aftertaste\x12\x18\n" +
+	"\abalance\x18\x04 \x01(\x05R\abalance\"\xe7\v\n" +
+	"\aTeaNote\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
+	"\rsession_title\x18\x02 \x01(\tH\x00R\fsessionTitle\x88\x01\x01\x12\x19\n" +
+	"\btea_name\x18\x03 \x01(\tR\ateaName\x12\x19\n" +
+	"\btea_type\x18\x04 \x01(\tR\ateaType\x12\x16\n" +
+	"\x06region\x18\x05 \x01(\tR\x06region\x12(\n" +
+	"\rorigin_detail\x18\x06 \x01(\tH\x01R\foriginDetail\x88\x01\x01\x12\x1f\n" +
+	"\bcultivar\x18\a \x01(\tH\x02R\bcultivar\x88\x01\x01\x12\x1b\n" +
+	"\x06source\x18\b \x01(\tH\x03R\x06source\x88\x01\x01\x12.\n" +
+	"\x10processing_style\x18\t \x01(\tH\x04R\x0fprocessingStyle\x88\x01\x01\x12*\n" +
+	"\x0eharvest_season\x18\n" +
+	" \x01(\tH\x05R\rharvestSeason\x88\x01\x01\x12&\n" +
+	"\fharvest_year\x18\v \x01(\x05H\x06R\vharvestYear\x88\x01\x01\x12%\n" +
+	"\x0eskipped_fields\x18\f \x03(\tR\rskippedFields\x12!\n" +
+	"\fbrewing_mode\x18\r \x01(\tR\vbrewingMode\x12%\n" +
+	"\x0ebrewing_method\x18\x0e \x01(\tR\rbrewingMethod\x12&\n" +
+	"\fwater_source\x18\x0f \x01(\tH\aR\vwaterSource\x88\x01\x01\x12\x1e\n" +
+	"\bsetup_id\x18\x10 \x01(\tH\bR\asetupId\x88\x01\x01\x12#\n" +
+	"\rsetup_summary\x18\x11 \x01(\tR\fsetupSummary\x12\"\n" +
+	"\n" +
+	"leaf_grams\x18\x12 \x01(\x01H\tR\tleafGrams\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"water_temp\x18\x13 \x01(\x05H\n" +
+	"R\twaterTemp\x88\x01\x01\x12+\n" +
+	"\x0fwater_volume_ml\x18\x14 \x01(\x05H\vR\rwaterVolumeMl\x88\x01\x01\x12$\n" +
+	"\vrinse_count\x18\x15 \x01(\x05H\fR\n" +
+	"rinseCount\x88\x01\x01\x12,\n" +
+	"\x0finfusions_count\x18\x16 \x01(\x05H\rR\x0einfusionsCount\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"time_value\x18\x17 \x01(\x01H\x0eR\ttimeValue\x88\x01\x01\x12\x1b\n" +
+	"\ttime_unit\x18\x18 \x01(\tR\btimeUnit\x12 \n" +
+	"\vdescriptors\x18\x19 \x03(\tR\vdescriptors\x12&\n" +
+	"\fliquor_color\x18\x1a \x01(\tH\x0fR\vliquorColor\x88\x01\x01\x12!\n" +
+	"\tmouthfeel\x18\x1b \x01(\tH\x10R\tmouthfeel\x88\x01\x01\x12(\n" +
+	"\renergy_effect\x18\x1c \x01(\tH\x11R\fenergyEffect\x88\x01\x01\x12\x1b\n" +
+	"\tfree_text\x18\x1d \x01(\tR\bfreeText\x125\n" +
+	"\aratings\x18\x1e \x01(\v2\x1b.teanotes.v1.NoteRatingsMsgR\aratings\x129\n" +
+	"\n" +
+	"updated_at\x18\x1f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\"\n" +
+	"\n" +
+	"note_color\x18  \x01(\tH\x12R\tnoteColor\x88\x01\x01B\x10\n" +
+	"\x0e_session_titleB\x10\n" +
+	"\x0e_origin_detailB\v\n" +
+	"\t_cultivarB\t\n" +
+	"\a_sourceB\x13\n" +
+	"\x11_processing_styleB\x11\n" +
+	"\x0f_harvest_seasonB\x0f\n" +
+	"\r_harvest_yearB\x0f\n" +
+	"\r_water_sourceB\v\n" +
+	"\t_setup_idB\r\n" +
+	"\v_leaf_gramsB\r\n" +
+	"\v_water_tempB\x12\n" +
+	"\x10_water_volume_mlB\x0e\n" +
+	"\f_rinse_countB\x12\n" +
+	"\x10_infusions_countB\r\n" +
+	"\v_time_valueB\x0f\n" +
+	"\r_liquor_colorB\f\n" +
+	"\n" +
+	"_mouthfeelB\x10\n" +
+	"\x0e_energy_effectB\r\n" +
+	"\v_note_color\"@\n" +
+	"\x14UpsertTeaNoteRequest\x12(\n" +
+	"\x04note\x18\x01 \x01(\v2\x14.teanotes.v1.TeaNoteR\x04note\"A\n" +
+	"\x15UpsertTeaNoteResponse\x12(\n" +
+	"\x04note\x18\x01 \x01(\v2\x14.teanotes.v1.TeaNoteR\x04note\",\n" +
+	"\x11GetTeaNoteRequest\x12\x17\n" +
+	"\anote_id\x18\x01 \x01(\tR\x06noteId\">\n" +
+	"\x12GetTeaNoteResponse\x12(\n" +
+	"\x04note\x18\x01 \x01(\v2\x14.teanotes.v1.TeaNoteR\x04note\"C\n" +
+	"\x13ListTeaNotesRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06offset\x18\x02 \x01(\x05R\x06offset\"B\n" +
+	"\x14ListTeaNotesResponse\x12*\n" +
+	"\x05notes\x18\x01 \x03(\v2\x14.teanotes.v1.TeaNoteR\x05notes\"/\n" +
+	"\x14DeleteTeaNoteRequest\x12\x17\n" +
+	"\anote_id\x18\x01 \x01(\tR\x06noteId\"\x17\n" +
+	"\x15DeleteTeaNoteResponse*\x81\x01\n" +
 	"\x0eDescriptorType\x12\x1f\n" +
 	"\x1bDESCRIPTOR_TYPE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15DESCRIPTOR_TYPE_AROMA\x10\x01\x12\x19\n" +
 	"\x15DESCRIPTOR_TYPE_TASTE\x10\x02\x12\x18\n" +
-	"\x14DESCRIPTOR_TYPE_BOTH\x10\x032\xcf\x03\n" +
+	"\x14DESCRIPTOR_TYPE_BOTH\x10\x032\xa3\x06\n" +
 	"\x0fTeaNotesService\x12V\n" +
 	"\rCreateSession\x12!.teanotes.v1.CreateSessionRequest\x1a\".teanotes.v1.CreateSessionResponse\x12M\n" +
 	"\n" +
 	"GetSession\x12\x1e.teanotes.v1.GetSessionRequest\x1a\x1f.teanotes.v1.GetSessionResponse\x12S\n" +
 	"\fListSessions\x12 .teanotes.v1.ListSessionsRequest\x1a!.teanotes.v1.ListSessionsResponse\x12G\n" +
 	"\bListTeas\x12\x1c.teanotes.v1.ListTeasRequest\x1a\x1d.teanotes.v1.ListTeasResponse\x12w\n" +
-	"\x18ListDescriptorCategories\x12,.teanotes.v1.ListDescriptorCategoriesRequest\x1a-.teanotes.v1.ListDescriptorCategoriesResponseB(Z&notea/api/proto/teanotes/v1;teanotesv1b\x06proto3"
+	"\x18ListDescriptorCategories\x12,.teanotes.v1.ListDescriptorCategoriesRequest\x1a-.teanotes.v1.ListDescriptorCategoriesResponse\x12V\n" +
+	"\rUpsertTeaNote\x12!.teanotes.v1.UpsertTeaNoteRequest\x1a\".teanotes.v1.UpsertTeaNoteResponse\x12M\n" +
+	"\n" +
+	"GetTeaNote\x12\x1e.teanotes.v1.GetTeaNoteRequest\x1a\x1f.teanotes.v1.GetTeaNoteResponse\x12S\n" +
+	"\fListTeaNotes\x12 .teanotes.v1.ListTeaNotesRequest\x1a!.teanotes.v1.ListTeaNotesResponse\x12V\n" +
+	"\rDeleteTeaNote\x12!.teanotes.v1.DeleteTeaNoteRequest\x1a\".teanotes.v1.DeleteTeaNoteResponseB(Z&notea/api/proto/teanotes/v1;teanotesv1b\x06proto3"
 
 var (
 	file_teanotes_v1_tea_notes_proto_rawDescOnce sync.Once
@@ -1129,7 +1930,7 @@ func file_teanotes_v1_tea_notes_proto_rawDescGZIP() []byte {
 }
 
 var file_teanotes_v1_tea_notes_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_teanotes_v1_tea_notes_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_teanotes_v1_tea_notes_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
 var file_teanotes_v1_tea_notes_proto_goTypes = []any{
 	(DescriptorType)(0),                      // 0: teanotes.v1.DescriptorType
 	(*DescriptorCategory)(nil),               // 1: teanotes.v1.DescriptorCategory
@@ -1149,7 +1950,17 @@ var file_teanotes_v1_tea_notes_proto_goTypes = []any{
 	(*GetSessionResponse)(nil),               // 15: teanotes.v1.GetSessionResponse
 	(*ListSessionsRequest)(nil),              // 16: teanotes.v1.ListSessionsRequest
 	(*ListSessionsResponse)(nil),             // 17: teanotes.v1.ListSessionsResponse
-	(*timestamppb.Timestamp)(nil),            // 18: google.protobuf.Timestamp
+	(*NoteRatingsMsg)(nil),                   // 18: teanotes.v1.NoteRatingsMsg
+	(*TeaNote)(nil),                          // 19: teanotes.v1.TeaNote
+	(*UpsertTeaNoteRequest)(nil),             // 20: teanotes.v1.UpsertTeaNoteRequest
+	(*UpsertTeaNoteResponse)(nil),            // 21: teanotes.v1.UpsertTeaNoteResponse
+	(*GetTeaNoteRequest)(nil),                // 22: teanotes.v1.GetTeaNoteRequest
+	(*GetTeaNoteResponse)(nil),               // 23: teanotes.v1.GetTeaNoteResponse
+	(*ListTeaNotesRequest)(nil),              // 24: teanotes.v1.ListTeaNotesRequest
+	(*ListTeaNotesResponse)(nil),             // 25: teanotes.v1.ListTeaNotesResponse
+	(*DeleteTeaNoteRequest)(nil),             // 26: teanotes.v1.DeleteTeaNoteRequest
+	(*DeleteTeaNoteResponse)(nil),            // 27: teanotes.v1.DeleteTeaNoteResponse
+	(*timestamppb.Timestamp)(nil),            // 28: google.protobuf.Timestamp
 }
 var file_teanotes_v1_tea_notes_proto_depIdxs = []int32{
 	2,  // 0: teanotes.v1.DescriptorCategory.segments:type_name -> teanotes.v1.DescriptorSegment
@@ -1160,29 +1971,43 @@ var file_teanotes_v1_tea_notes_proto_depIdxs = []int32{
 	9,  // 5: teanotes.v1.Session.params:type_name -> teanotes.v1.BrewingParams
 	10, // 6: teanotes.v1.Session.aroma_descriptors:type_name -> teanotes.v1.DescriptorScore
 	10, // 7: teanotes.v1.Session.taste_descriptors:type_name -> teanotes.v1.DescriptorScore
-	18, // 8: teanotes.v1.Session.session_at:type_name -> google.protobuf.Timestamp
+	28, // 8: teanotes.v1.Session.session_at:type_name -> google.protobuf.Timestamp
 	9,  // 9: teanotes.v1.CreateSessionRequest.params:type_name -> teanotes.v1.BrewingParams
 	10, // 10: teanotes.v1.CreateSessionRequest.aroma_descriptors:type_name -> teanotes.v1.DescriptorScore
 	10, // 11: teanotes.v1.CreateSessionRequest.taste_descriptors:type_name -> teanotes.v1.DescriptorScore
-	18, // 12: teanotes.v1.CreateSessionRequest.session_at:type_name -> google.protobuf.Timestamp
+	28, // 12: teanotes.v1.CreateSessionRequest.session_at:type_name -> google.protobuf.Timestamp
 	11, // 13: teanotes.v1.CreateSessionResponse.session:type_name -> teanotes.v1.Session
 	11, // 14: teanotes.v1.GetSessionResponse.session:type_name -> teanotes.v1.Session
 	11, // 15: teanotes.v1.ListSessionsResponse.sessions:type_name -> teanotes.v1.Session
-	12, // 16: teanotes.v1.TeaNotesService.CreateSession:input_type -> teanotes.v1.CreateSessionRequest
-	14, // 17: teanotes.v1.TeaNotesService.GetSession:input_type -> teanotes.v1.GetSessionRequest
-	16, // 18: teanotes.v1.TeaNotesService.ListSessions:input_type -> teanotes.v1.ListSessionsRequest
-	5,  // 19: teanotes.v1.TeaNotesService.ListTeas:input_type -> teanotes.v1.ListTeasRequest
-	7,  // 20: teanotes.v1.TeaNotesService.ListDescriptorCategories:input_type -> teanotes.v1.ListDescriptorCategoriesRequest
-	13, // 21: teanotes.v1.TeaNotesService.CreateSession:output_type -> teanotes.v1.CreateSessionResponse
-	15, // 22: teanotes.v1.TeaNotesService.GetSession:output_type -> teanotes.v1.GetSessionResponse
-	17, // 23: teanotes.v1.TeaNotesService.ListSessions:output_type -> teanotes.v1.ListSessionsResponse
-	6,  // 24: teanotes.v1.TeaNotesService.ListTeas:output_type -> teanotes.v1.ListTeasResponse
-	8,  // 25: teanotes.v1.TeaNotesService.ListDescriptorCategories:output_type -> teanotes.v1.ListDescriptorCategoriesResponse
-	21, // [21:26] is the sub-list for method output_type
-	16, // [16:21] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	18, // 16: teanotes.v1.TeaNote.ratings:type_name -> teanotes.v1.NoteRatingsMsg
+	28, // 17: teanotes.v1.TeaNote.updated_at:type_name -> google.protobuf.Timestamp
+	19, // 18: teanotes.v1.UpsertTeaNoteRequest.note:type_name -> teanotes.v1.TeaNote
+	19, // 19: teanotes.v1.UpsertTeaNoteResponse.note:type_name -> teanotes.v1.TeaNote
+	19, // 20: teanotes.v1.GetTeaNoteResponse.note:type_name -> teanotes.v1.TeaNote
+	19, // 21: teanotes.v1.ListTeaNotesResponse.notes:type_name -> teanotes.v1.TeaNote
+	12, // 22: teanotes.v1.TeaNotesService.CreateSession:input_type -> teanotes.v1.CreateSessionRequest
+	14, // 23: teanotes.v1.TeaNotesService.GetSession:input_type -> teanotes.v1.GetSessionRequest
+	16, // 24: teanotes.v1.TeaNotesService.ListSessions:input_type -> teanotes.v1.ListSessionsRequest
+	5,  // 25: teanotes.v1.TeaNotesService.ListTeas:input_type -> teanotes.v1.ListTeasRequest
+	7,  // 26: teanotes.v1.TeaNotesService.ListDescriptorCategories:input_type -> teanotes.v1.ListDescriptorCategoriesRequest
+	20, // 27: teanotes.v1.TeaNotesService.UpsertTeaNote:input_type -> teanotes.v1.UpsertTeaNoteRequest
+	22, // 28: teanotes.v1.TeaNotesService.GetTeaNote:input_type -> teanotes.v1.GetTeaNoteRequest
+	24, // 29: teanotes.v1.TeaNotesService.ListTeaNotes:input_type -> teanotes.v1.ListTeaNotesRequest
+	26, // 30: teanotes.v1.TeaNotesService.DeleteTeaNote:input_type -> teanotes.v1.DeleteTeaNoteRequest
+	13, // 31: teanotes.v1.TeaNotesService.CreateSession:output_type -> teanotes.v1.CreateSessionResponse
+	15, // 32: teanotes.v1.TeaNotesService.GetSession:output_type -> teanotes.v1.GetSessionResponse
+	17, // 33: teanotes.v1.TeaNotesService.ListSessions:output_type -> teanotes.v1.ListSessionsResponse
+	6,  // 34: teanotes.v1.TeaNotesService.ListTeas:output_type -> teanotes.v1.ListTeasResponse
+	8,  // 35: teanotes.v1.TeaNotesService.ListDescriptorCategories:output_type -> teanotes.v1.ListDescriptorCategoriesResponse
+	21, // 36: teanotes.v1.TeaNotesService.UpsertTeaNote:output_type -> teanotes.v1.UpsertTeaNoteResponse
+	23, // 37: teanotes.v1.TeaNotesService.GetTeaNote:output_type -> teanotes.v1.GetTeaNoteResponse
+	25, // 38: teanotes.v1.TeaNotesService.ListTeaNotes:output_type -> teanotes.v1.ListTeaNotesResponse
+	27, // 39: teanotes.v1.TeaNotesService.DeleteTeaNote:output_type -> teanotes.v1.DeleteTeaNoteResponse
+	31, // [31:40] is the sub-list for method output_type
+	22, // [22:31] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_teanotes_v1_tea_notes_proto_init() }
@@ -1190,13 +2015,14 @@ func file_teanotes_v1_tea_notes_proto_init() {
 	if File_teanotes_v1_tea_notes_proto != nil {
 		return
 	}
+	file_teanotes_v1_tea_notes_proto_msgTypes[18].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_teanotes_v1_tea_notes_proto_rawDesc), len(file_teanotes_v1_tea_notes_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   17,
+			NumMessages:   27,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

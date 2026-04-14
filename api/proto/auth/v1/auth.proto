@@ -8,6 +8,7 @@ service AuthService {
     rpc Register(RegisterRequest) returns (RegisterResponse);
     rpc Login(LoginRequest) returns (LoginResponse);
     rpc Validate(ValidateRequest) returns (ValidateResponse);
+    rpc RefreshSession(RefreshSessionRequest) returns (RefreshSessionResponse);
 }
 
 message User {
@@ -46,4 +47,13 @@ message ValidateRequest {
 message ValidateResponse {
     string user_id = 1;
     bool ok = 2;
+}
+
+message RefreshSessionRequest {
+    string refresh_token = 1;
+}
+
+message RefreshSessionResponse {
+    string access_token = 1;
+    string refresh_token = 2;
 }

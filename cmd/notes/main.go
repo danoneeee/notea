@@ -7,6 +7,7 @@ import (
 	"os"
 
 	teanotesv1 "notea/api/proto/teanotes/v1"
+	"notea/internal/auth"
 	"notea/internal/notes"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -29,6 +30,10 @@ func main() {
 	}
 	log.Println("DB connected")
 
+	if err := auth.CreateTables(context.Background(), pool); err != nil {
+		log.Fatalf("create auth tables: %v", err)
+	}
+
 	if err := notes.CreateTables(context.Background(), pool); err != nil {
 		log.Fatalf("create tables: %v", err)
 	}
@@ -38,7 +43,12 @@ func main() {
 		log.Fatalf("listen: %v", err)
 	}
 
-	srv := grpc.NewServer()
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "dev-secret-change-in-production"
+	}
+
+	srv := grpc.NewServer(grpc.ChainUnaryInterceptor(notes.UnaryAuthInterceptor(jwtSecret)))
 	teanotesv1.RegisterTeaNotesServiceServer(srv, notes.NewServer(pool))
 	reflection.Register(srv)
 

@@ -1,17 +1,27 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, ref } from 'vue';
-import { descriptorWheelFamilies } from '../data/descriptors';
+import { useRouter } from 'vue-router';
+import DescriptorWheel from '../components/DescriptorWheel.vue';
+import { describeDescriptorPath, descriptorWheelFamilies, getDescriptorGroupById } from '../data/descriptors';
 import { listNotes, notesRevision } from '../services/notes';
 import { listSetups } from '../services/setups';
 
 const ChinaTeaMap = defineAsyncComponent(() => import('../components/ChinaTeaMap.vue'));
+const router = useRouter();
+
+const wheelDescriptors = descriptorWheelFamilies;
+
+function isLeafDescriptorId(raw: string) {
+  const meta = describeDescriptorPath(raw);
+  return meta.fullLabel !== raw;
+}
 
 const notes = computed(() => {
   notesRevision.value;
   return listNotes();
 });
 
-const activeSection = ref<'overview' | 'map' | 'passport' | 'brewing' | 'profile'>('overview');
+const activeSection = ref<'overview' | 'map' | 'brewing' | 'profile'>('overview');
 
 const selectedTeaType = ref('');
 const selectedRegion = ref('');
@@ -89,32 +99,6 @@ const brewingModeColors: Record<string, string> = {
   coldbrew: '#5c9db7',
 };
 
-const mouthfeelLabels: Record<string, string> = {
-  airy: 'Воздушное',
-  silky: 'Шелковистое',
-  juicy: 'Сочное',
-  oily: 'Маслянистое',
-  dense: 'Плотное',
-  drying: 'Подсушивающее',
-};
-
-const energyLabels: Record<string, string> = {
-  quiet: 'Спокойное',
-  warm: 'Тёплое',
-  focused: 'Собранное',
-  uplifting: 'Поднимающее',
-  strong: 'Сильное',
-};
-
-const liquorColorLabels: Record<string, string> = {
-  'very-light': 'Очень светлый',
-  gold: 'Золотистый',
-  amber: 'Янтарный',
-  orange: 'Оранжево-медный',
-  'red-brown': 'Красно-коричневый',
-  dark: 'Тёмный',
-};
-
 const harvestSeasonLabels: Record<string, string> = {
   spring: 'Весна',
   summer: 'Лето',
@@ -173,8 +157,115 @@ const descriptorStats = computed(() => {
     }));
 });
 
-const notesWithDescriptors = computed(() => filteredNotes.value.filter((note) => note.descriptors.length > 0).length);
-const descriptorCoverage = computed(() => (totalNotes.value ? Math.round((notesWithDescriptors.value / totalNotes.value) * 100) : 0));
+const descriptorSegmentIntensity = computed(() => {
+  const usage = new Map<string, number>();
+  for (const descriptor of wheelDescriptors) {
+    usage.set(descriptor.id, 0);
+  }
+  for (const note of filteredNotes.value) {
+    for (const descriptor of note.descriptors) {
+      const familyId = descriptor.split(':')[0];
+      if (usage.has(familyId)) {
+        usage.set(familyId, (usage.get(familyId) ?? 0) + 1);
+      }
+    }
+  }
+  let max = 0;
+  for (const value of usage.values()) {
+    max = Math.max(max, value);
+  }
+  const out: Record<string, number> = {};
+  for (const descriptor of wheelDescriptors) {
+    const count = usage.get(descriptor.id) ?? 0;
+    out[descriptor.id] = max > 0 ? count / max : 0;
+  }
+  return out;
+});
+
+const exactDescriptorStats = computed(() => {
+  const map = new Map<string, number>();
+  for (const note of filteredNotes.value) {
+    for (const id of note.descriptors) {
+      if (!isLeafDescriptorId(id)) continue;
+      map.set(id, (map.get(id) ?? 0) + 1);
+    }
+  }
+  return [...map.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([id, count]) => {
+      const meta = describeDescriptorPath(id);
+      return {
+        id,
+        count,
+        shortLabel: meta.shortLabel,
+        fullLabel: meta.fullLabel,
+        color: meta.color,
+      };
+    });
+});
+
+const descriptorSubgroupStats = computed(() => {
+  const map = new Map<string, number>();
+  for (const note of filteredNotes.value) {
+    for (const id of note.descriptors) {
+      if (!isLeafDescriptorId(id)) continue;
+      const parts = id.split(':');
+      const familyId = parts[0];
+      const groupId = parts[1];
+      if (!familyId || !groupId) continue;
+      const key = `${familyId}:${groupId}`;
+      map.set(key, (map.get(key) ?? 0) + 1);
+    }
+  }
+  return [...map.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([key, count]) => {
+      const [familyId, groupId] = key.split(':');
+      const group = getDescriptorGroupById(familyId, groupId);
+      return {
+        key,
+        count,
+        subgroupLabel: group?.label ?? groupId,
+        color: descriptorMetaById[familyId]?.color ?? '#d9e5d6',
+      };
+    });
+});
+
+const exactDescriptorTeaTypeProfiles = computed(() =>
+  teaTypeStats.value
+    .filter((item) => item.label !== 'Не указан')
+    .slice(0, 4)
+    .map((item) => {
+      const notesForType = filteredNotes.value.filter((note) => (note.teaType.trim() || 'Не указан') === item.label);
+      const leafCounts = new Map<string, number>();
+      let notesWithLeaf = 0;
+      for (const note of notesForType) {
+        const leaves = note.descriptors.filter((id) => isLeafDescriptorId(id));
+        if (!leaves.length) continue;
+        notesWithLeaf += 1;
+        for (const lid of leaves) {
+          leafCounts.set(lid, (leafCounts.get(lid) ?? 0) + 1);
+        }
+      }
+      const topLeaves = [...leafCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([leafId]) => {
+          const meta = describeDescriptorPath(leafId);
+          return { id: leafId, label: meta.shortLabel, color: meta.color, fullLabel: meta.fullLabel };
+        });
+      return {
+        teaType: item.label,
+        notesCount: notesForType.length,
+        notesWithLeaf,
+        coverage: notesForType.length ? Math.round((notesWithLeaf / notesForType.length) * 100) : 0,
+        topLeaves,
+      };
+    }),
+);
+
 const topDescriptor = computed(() => descriptorStats.value[0] ?? null);
 const namedSessions = computed(() => filteredNotes.value.filter((note) => note.sessionTitle?.trim()).length);
 const namedSessionsPercent = computed(() => (totalNotes.value ? Math.round((namedSessions.value / totalNotes.value) * 100) : 0));
@@ -211,9 +302,6 @@ const setupStats = computed(
     ),
 );
 const waterSourceStats = computed(() => countStats(filteredNotes.value.map((note) => note.waterSource), { excludeEmpty: true, limit: 4 }));
-const mouthfeelStats = computed(() => countStats(filteredNotes.value.map((note) => note.mouthfeel), { labelMap: mouthfeelLabels, excludeEmpty: true, limit: 4 }));
-const energyStats = computed(() => countStats(filteredNotes.value.map((note) => note.energyEffect), { labelMap: energyLabels, excludeEmpty: true, limit: 4 }));
-const liquorColorStats = computed(() => countStats(filteredNotes.value.map((note) => note.liquorColor), { labelMap: liquorColorLabels, excludeEmpty: true, limit: 4 }));
 const sourceStats = computed(() => countStats(filteredNotes.value.map((note) => note.source), { excludeEmpty: true, limit: 4 }));
 const processingStyleStats = computed(() => countStats(filteredNotes.value.map((note) => note.processingStyle), { excludeEmpty: true, limit: 4 }));
 const harvestSeasonStats = computed(() => countStats(filteredNotes.value.map((note) => note.harvestSeason), { labelMap: harvestSeasonLabels, excludeEmpty: true, limit: 4 }));
@@ -386,6 +474,18 @@ function clearFilters() {
   selectedBrewingMode.value = '';
   selectedSource.value = '';
 }
+
+function openFilteredNotes() {
+  router.push({
+    name: 'app-notes',
+    query: {
+      ...(selectedTeaType.value ? { teaType: selectedTeaType.value } : {}),
+      ...(selectedRegion.value ? { region: selectedRegion.value } : {}),
+      ...(selectedBrewingMode.value ? { brewingMode: selectedBrewingMode.value } : {}),
+      ...(selectedSource.value ? { source: selectedSource.value } : {}),
+    },
+  });
+}
 </script>
 
 <template>
@@ -438,7 +538,10 @@ function clearFilters() {
         </div>
         <div class="filter-footer">
           <span class="filter-meta">В выборке: {{ totalNotes }} заметок</span>
-          <button type="button" class="clear-btn" @click="clearFilters">Сбросить фильтры</button>
+          <div class="filter-actions">
+            <button type="button" class="clear-btn" @click="openFilteredNotes">Открыть в заметках</button>
+            <button type="button" class="clear-btn" @click="clearFilters">Сбросить фильтры</button>
+          </div>
         </div>
       </section>
 
@@ -464,14 +567,6 @@ function clearFilters() {
               @click="activeSection = 'map'"
             >
               География
-            </button>
-            <button
-              type="button"
-              class="nav-chip"
-              :class="{ active: activeSection === 'passport' }"
-              @click="activeSection = 'passport'"
-            >
-              Паспорт партии
             </button>
             <button
               type="button"
@@ -702,25 +797,6 @@ function clearFilters() {
           </section>
 
           <section
-            id="analytics-passport"
-            v-if="activeSection === 'passport'"
-            class="criteria-block passport-section"
-          >
-            <div class="criteria-head">
-              <h3>Паспорт партии</h3>
-              <p>Раздел сейчас в переработке. Хочу собрать его как отдельный «материальный» слой аналитики по происхождению и партии.</p>
-            </div>
-            <article class="box wip-box">
-              <div class="section-head compact">
-                <div>
-                  <h3>Work in progress</h3>
-                  <p class="section-copy">Секция временно скрыта от полноценной аналитики и будет собрана заново.</p>
-                </div>
-              </div>
-            </article>
-          </section>
-
-          <section
             id="analytics-brewing"
             v-if="activeSection === 'brewing'"
             class="criteria-block brewing-section"
@@ -879,91 +955,128 @@ function clearFilters() {
           <section
             id="analytics-profile"
             v-if="activeSection === 'profile'"
-            class="criteria-block"
+            class="criteria-block profile-section"
           >
             <div class="criteria-head">
               <h3>Вкусовой профиль</h3>
-              <p>Сопоставляет предпочтительные типы чая, доминирующие дескрипторы и ощущения от чашки.</p>
+              <p>Круг по семействам, затем точные ноты и подгруппы — в рамках выбранных фильтров.</p>
             </div>
-            <div class="analytics-grid">
-              <article id="analytics-types" class="box">
+            <div class="analytics-grid profile-grid">
+              <article class="box profile-wheel-box">
                 <div class="section-head compact">
                   <div>
-                    <h3>Типы чая</h3>
-                    <p class="section-copy">Какие чайные направления доминируют в твоей практике.</p>
+                    <h3>Дескрипторный круг</h3>
+                    <p class="section-copy">Насыщенность сегмента — как часто в срезе встречаются отметки этого семейства.</p>
                   </div>
                 </div>
-                <ul class="bars">
-                  <li v-for="item in teaTypeStats" :key="item.label">
-                    <div class="bar-head">
-                      <span>{{ item.label }}</span>
-                      <strong>{{ item.percent }}%</strong>
-                    </div>
-                    <div class="bar-track">
-                      <div class="bar-fill" :style="{ width: `${item.percent}%` }" />
-                    </div>
-                    <div class="bar-foot">{{ item.count }} заметок</div>
-                  </li>
-                </ul>
+                <DescriptorWheel
+                  :descriptors="wheelDescriptors"
+                  :selected-ids="[]"
+                  :segment-intensity="descriptorSegmentIntensity"
+                  center-label="НОТЫ"
+                />
               </article>
 
-              <article id="analytics-descriptors" class="box">
+              <div class="analytics-divider" aria-hidden="true">
+                <span />
+              </div>
+
+              <article id="analytics-descriptors" class="box profile-deep-box">
                 <div class="section-head compact">
                   <div>
-                    <h3>Дескрипторы</h3>
-                    <p class="section-copy">Семейства нот, которые ты отмечаешь чаще всего.</p>
+                    <h3>Семейства (топ)</h3>
+                    <p class="section-copy">Агрегат по большим секторам круга — как семейства чаще всего попадают в заметки.</p>
                   </div>
                 </div>
-                <ol class="rank-list">
-                  <li v-for="item in descriptorStats" :key="item.id">
-                    <span class="rank-label">
-                      <span class="descriptor-dot" :style="{ background: item.color }" />
-                      <span>{{ item.label }}</span>
-                    </span>
-                    <strong>{{ item.count }}</strong>
-                  </li>
-                </ol>
+                <div class="profile-leaders-scroll">
+                  <ol class="rank-list">
+                    <li v-for="item in descriptorStats" :key="item.id">
+                      <span class="rank-label">
+                        <span class="descriptor-dot" :style="{ background: item.color }" />
+                        <span>{{ item.label }}</span>
+                      </span>
+                      <strong>{{ item.count }}</strong>
+                    </li>
+                  </ol>
+                </div>
               </article>
 
-              <article class="box insight-box">
+              <article class="box profile-deep-box">
                 <div class="section-head compact">
                   <div>
-                    <h3>Чашка и состояние</h3>
-                    <p class="section-copy">Что чаще всего встречается в ощущениях от настоя и после сессии.</p>
+                    <h3>Сильные подгруппы</h3>
+                    <p class="section-copy">Средний уровень круга — куда ты чаще «сужаешь» вкус внутри семейства.</p>
                   </div>
                 </div>
-                <div class="detail-columns stacked">
+                <div class="profile-leaders-scroll">
+                  <ul v-if="descriptorSubgroupStats.length" class="rank-list">
+                    <li v-for="item in descriptorSubgroupStats" :key="item.key">
+                      <span class="rank-label">
+                        <span class="descriptor-dot" :style="{ background: item.color }" />
+                        <span>{{ item.subgroupLabel }}</span>
+                      </span>
+                      <strong>{{ item.count }}</strong>
+                    </li>
+                  </ul>
+                  <p v-else class="mini-empty">Нужны точные ноты из круга — тогда можно посчитать подгруппы.</p>
+                </div>
+              </article>
+
+              <article class="box profile-deep-box">
+                <div class="section-head compact">
                   <div>
-                    <h4>Текстура</h4>
-                    <ul v-if="mouthfeelStats.length" class="mini-list">
-                      <li v-for="item in mouthfeelStats" :key="item.key">
-                        <span>{{ item.label }}</span>
-                        <strong>{{ item.count }}</strong>
-                      </li>
-                    </ul>
-                    <p v-else class="mini-empty">Текстура чашки пока не заполнялась.</p>
-                  </div>
-                  <div>
-                    <h4>Состояние</h4>
-                    <ul v-if="energyStats.length" class="mini-list">
-                      <li v-for="item in energyStats" :key="item.key">
-                        <span>{{ item.label }}</span>
-                        <strong>{{ item.count }}</strong>
-                      </li>
-                    </ul>
-                    <p v-else class="mini-empty">Данных о состоянии после сессии пока нет.</p>
-                  </div>
-                  <div>
-                    <h4>Цвет настоя</h4>
-                    <ul v-if="liquorColorStats.length" class="mini-list">
-                      <li v-for="item in liquorColorStats" :key="item.key">
-                        <span>{{ item.label }}</span>
-                        <strong>{{ item.count }}</strong>
-                      </li>
-                    </ul>
-                    <p v-else class="mini-empty">Цвет настоя пока не указывался.</p>
+                    <h3>Точные ноты (лидеры)</h3>
+                    <p class="section-copy">Конкретные отметки третьего уровня — самые частые в текущем срезе.</p>
                   </div>
                 </div>
+                <div class="profile-leaders-scroll">
+                  <ol v-if="exactDescriptorStats.length" class="rank-list exact-descriptor-list">
+                    <li v-for="item in exactDescriptorStats" :key="item.id">
+                      <span class="rank-label exact-descriptor-main" :title="item.fullLabel">
+                        <span class="descriptor-dot" :style="{ background: item.color }" />
+                        <span>{{ item.shortLabel }}</span>
+                      </span>
+                      <span class="exact-descriptor-meta">
+                        <strong>{{ item.count }}</strong>
+                      </span>
+                    </li>
+                  </ol>
+                  <p v-else class="mini-empty">Здесь появятся данные, когда в заметках будут выбраны точные ноты (не только семейство).</p>
+                </div>
+              </article>
+
+              <article class="box region-descriptor-box profile-tea-leaf-box">
+                <div class="section-head compact">
+                  <div>
+                    <h3>Точные ноты × тип чая</h3>
+                    <p class="section-copy">Для основных типов в срезе — какие конкретные ноты всплывают чаще всего.</p>
+                  </div>
+                </div>
+                <div v-if="exactDescriptorTeaTypeProfiles.some((row) => row.topLeaves.length)" class="region-descriptor-grid">
+                  <article
+                    v-for="item in exactDescriptorTeaTypeProfiles"
+                    :key="item.teaType"
+                    class="region-descriptor-card"
+                  >
+                    <div class="region-descriptor-head">
+                      <strong>{{ item.teaType }}</strong>
+                      <span>{{ item.coverage }}% с точными нотами</span>
+                    </div>
+                    <div v-if="item.topLeaves.length" class="descriptor-pill-list">
+                      <span
+                        v-for="leaf in item.topLeaves"
+                        :key="`${item.teaType}-${leaf.id}`"
+                        class="descriptor-pill"
+                        :title="leaf.fullLabel"
+                      >
+                        <span class="descriptor-dot" :style="{ background: leaf.color }" />
+                        <span>{{ leaf.label }}</span>
+                      </span>
+                    </div>
+                    <p v-else class="mini-empty">Пока нет точных нот для этого типа в срезе.</p>
+                  </article>
+                </div>
+                <p v-else class="mini-empty">Блок заполнится, когда появятся типы чая с выбранными точными дескрипторами.</p>
               </article>
             </div>
           </section>
@@ -985,6 +1098,7 @@ h2 { margin: 0 0 6px; }
 .filter-field span { font-weight: 700; color: #49654f; }
 .filter-field select { border: 1px solid #cedec9; border-radius: 10px; padding: 10px 12px; background: #fff; font-size: 14px; }
 .filter-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.filter-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .filter-meta { color: #5d7460; font-size: 13px; }
 .clear-btn { border: 1px solid #d7e5d2; border-radius: 10px; background: #fff; color: #285231; padding: 8px 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
 .section-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
@@ -1042,6 +1156,84 @@ h2 { margin: 0 0 6px; }
 .brewing-section .insight-label,
 .passport-section .section-copy {
   color: #5d7460;
+}
+.profile-section .stat-box,
+.profile-section .box {
+  background: linear-gradient(180deg, #fbfdf8 0%, #f7fbf4 100%);
+}
+.profile-section .section-head h3,
+.profile-section .insight-list strong {
+  color: #173a20;
+}
+.profile-section .section-copy,
+.profile-section .insight-label {
+  color: #5d7460;
+}
+.profile-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.profile-grid > .analytics-divider {
+  grid-column: 1 / -1;
+  margin-block: 6px 2px;
+}
+.profile-wheel-box {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.profile-wheel-box :deep(.wheel-wrap) {
+  justify-content: center;
+}
+.profile-grid .profile-tea-leaf-box,
+.profile-grid .profile-cup-box {
+  grid-column: 1 / -1;
+}
+.exact-descriptor-list .exact-descriptor-main {
+  min-width: 0;
+}
+.exact-descriptor-meta strong {
+  color: #204f2b;
+}
+.profile-deep-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+}
+.profile-leaders-scroll {
+  max-height: 200px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 6px;
+  margin-right: -2px;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #a8c5a7 #f0f5ee;
+}
+.profile-leaders-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.profile-leaders-scroll::-webkit-scrollbar-thumb {
+  background: #a8c5a7;
+  border-radius: 999px;
+  border: 2px solid #f7fbf4;
+}
+.profile-leaders-scroll::-webkit-scrollbar-track {
+  background: #eef4ea;
+  border-radius: 999px;
+}
+.profile-leaders-scroll .mini-empty {
+  margin: 0;
+}
+.profile-leaders-scroll .rank-list {
+  gap: 6px;
+}
+.profile-leaders-scroll .rank-list li {
+  padding: 8px 10px;
 }
 .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .stat-box { border: 1px solid #e3eee0; border-radius: 12px; padding: 12px 14px; background: #fbfdf8; display: flex; flex-direction: column; gap: 4px; }
@@ -1317,6 +1509,7 @@ h2 { margin: 0 0 6px; }
   .region-descriptor-grid,
   .brew-mode-card-grid,
   .brew-metric-grid,
+  .profile-grid,
   .stats, .overview-grid, .analytics-grid { grid-template-columns: 1fr; }
   .filter-footer { flex-direction: column; align-items: flex-start; }
   .passport-origin-layout,

@@ -1,29 +1,54 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import DescriptorWheel from '../components/DescriptorWheel.vue';
+import { useRoute, useRouter } from 'vue-router';
+import NoteBasicsStep from '../components/note-form/NoteBasicsStep.vue';
+import NoteBrewStep from '../components/note-form/NoteBrewStep.vue';
+import NoteDescriptorsStep from '../components/note-form/NoteDescriptorsStep.vue';
+import NoteFinishStep from '../components/note-form/NoteFinishStep.vue';
 import {
   describeDescriptorPath,
   descriptorFamilies,
   getDescriptorFamilyById,
   getDescriptorGroupById,
 } from '../data/descriptors';
-import { NOTES_DRAFT_KEY, upsertRecentNote } from '../services/notes';
+import {
+  NOTES_DRAFT_KEY,
+  discardDraft,
+  ensureNoteAvailable,
+  getLatestDraft,
+  publishNote,
+  saveDraft as saveDraftRecord,
+  type NoteRecord,
+} from '../services/notes';
+import {
+  buildSetupSummary,
+  createSkippedBasicsState,
+  createSkippedBrewState,
+  getStepValidationError,
+  readStoredDraftNoteId,
+  type OptionalBasicField,
+  type OptionalBrewField,
+  cultivarSuggestions,
+  originSuggestions,
+  processingStyleOptions,
+  regionSuggestions,
+  sourceOptions,
+  teaTypeOptions,
+  waterSourceOptions,
+} from '../services/noteForm';
+import { noteColorOptions } from '../services/noteColors';
 import { listSetups, type TeaSetup } from '../services/setups';
 
-type OptionalBasicField = 'originDetail' | 'cultivar' | 'source' | 'harvestSeason' | 'harvestYear' | 'processingStyle';
-type OptionalBrewField = 'waterSource' | 'rinseCount' | 'infusionsCount' | 'brewingMethod';
-
-const teaTypeOptions = ['Шен пуэр', 'Шу пуэр', 'Улун', 'Белый', 'Зелёный', 'Красный', 'Хэйча', 'Жёлтый', 'Матча', 'Травяной'];
-const regionSuggestions = ['Юньнань', 'Фуцзянь', 'Гуандун', 'Аньхой', 'Чжэцзян', 'Сычуань', 'Тайвань', 'Япония', 'Корея', 'Индия', 'Непал', 'Шри-Ланка'];
-const originSuggestions = ['Мэнхай', 'Иу', 'Буланшань', 'Уишань', 'Алишань', 'Лишань', 'Фудин', 'Чаочжоу'];
-const cultivarSuggestions = ['Да Е Чжун', 'Цин Синь', 'Жоу Гуй', 'Шуй Сянь', 'Фо Шоу', 'Мэй Чжань', 'Бай Хао'];
-const sourceOptions = ['Магазин', 'Чайный клуб', 'Обмен', 'Подарок', 'Путешествие', 'Личный запас'];
-const processingStyleOptions = ['Свежий', 'Выдержанный', 'Лёгкая обжарка', 'Средняя обжарка', 'Сильная обжарка', 'Сильная ферментация', 'Bug-bitten', 'Charcoal roast'];
-const waterSourceOptions = ['Фильтрованная', 'Бутилированная', 'Родниковая', 'Осмос + минерализация', 'Водопроводная отстоянная'];
-
+const route = useRoute();
 const router = useRouter();
 const step = ref(1);
+const draftNoteId = ref(readStoredDraftNoteId(localStorage.getItem(NOTES_DRAFT_KEY)));
+const stepError = ref('');
+const formNotice = ref('');
+
+if (route.query.fresh === '1' || route.params.noteId) {
+  draftNoteId.value = crypto.randomUUID();
+}
 
 const sessionTitle = ref('');
 const teaName = ref('');
@@ -50,6 +75,7 @@ const timeValue = ref<number | null>(null);
 const liquorColor = ref('');
 const mouthfeel = ref('');
 const energyEffect = ref('');
+const noteColor = ref('');
 const freeText = ref('');
 
 const setups = ref<TeaSetup[]>([]);
@@ -60,28 +86,59 @@ const ratings = ref({
   balance: 0,
 });
 
+const basicFields = {
+  sessionTitle,
+  teaName,
+  teaType,
+  region,
+  originDetail,
+  cultivar,
+  source,
+  processingStyle,
+  harvestSeason,
+  harvestYear,
+};
+
+const brewFields = {
+  brewingMode,
+  setupId,
+  setups,
+  leafGrams,
+  waterVolumeMl,
+  waterTemp,
+  timeValue,
+  waterSource,
+  rinseCount,
+  infusionsCount,
+  brewingMethod,
+};
+
+const finishFields = {
+  liquorColor,
+  mouthfeel,
+  energyEffect,
+  ratings,
+  noteColor,
+  freeText,
+};
+
 const showExtraBasics = ref(false);
 const showExtraBrew = ref(false);
-const skippedBasics = ref<Record<OptionalBasicField, boolean>>({
-  originDetail: false,
-  cultivar: false,
-  source: false,
-  harvestSeason: false,
-  harvestYear: false,
-  processingStyle: false,
-});
-const skippedBrew = ref<Record<OptionalBrewField, boolean>>({
-  waterSource: false,
-  rinseCount: false,
-  infusionsCount: false,
-  brewingMethod: false,
-});
+const skippedBasics = ref<Record<OptionalBasicField, boolean>>(createSkippedBasicsState());
+const skippedBrew = ref<Record<OptionalBrewField, boolean>>(createSkippedBrewState());
 
 const selectedLimit = 12;
 const activeFamilyId = ref<string | null>(null);
 const activeGroupId = ref<string | null>(null);
 const expandingNodeId = ref<string | null>(null);
 const selectedDescriptorIds = ref<string[]>([]);
+
+const descriptorState = {
+  selectedDescriptorIds,
+  activeFamilyId,
+  activeGroupId,
+  expandingNodeId,
+};
 
 const activeFamily = computed(() => (activeFamilyId.value ? getDescriptorFamilyById(activeFamilyId.value) : null));
 const activeGroup = computed(() => {
@@ -169,6 +226,8 @@ const skippedBrewFields = computed(() =>
 const skippedFields = computed(() => [...skippedBasicFields.value, ...skippedBrewFields.value]);
 const areRatingsComplete = computed(() => Object.values(ratings.value).every((value) => value > 0));
 const ratingsAverage = computed(() => (Object.values(ratings.value).reduce((sum, value) => sum + value, 0) / 4).toFixed(1));
+const editingNoteId = computed(() => String(route.params.noteId ?? '').trim());
+const isEditing = computed(() => Boolean(editingNoteId.value));
 
 const stepIntroCopy = computed(() => {
   if (step.value === 1) {
@@ -202,11 +261,129 @@ const timeMax = computed(() => {
   return 48;
 });
 
-onMounted(() => {
+function applyNoteRecord(note: NoteRecord) {
+  draftNoteId.value = note.id || crypto.randomUUID();
+  sessionTitle.value = note.sessionTitle ?? '';
+  teaName.value = note.teaName ?? '';
+  teaType.value = note.teaType ?? '';
+  region.value = note.region ?? '';
+  originDetail.value = note.originDetail ?? '';
+  cultivar.value = note.cultivar ?? '';
+  source.value = note.source ?? '';
+  processingStyle.value = note.processingStyle ?? '';
+  harvestSeason.value = note.harvestSeason ?? '';
+  harvestYear.value = note.harvestYear ?? null;
+  brewingMode.value = note.brewingMode ?? 'gongfu';
+  brewingMethod.value = note.brewingMethod ?? '';
+  waterSource.value = note.waterSource ?? '';
+  setupId.value = note.setupId ?? '';
+  leafGrams.value = note.leafGrams ?? null;
+  waterTemp.value = note.waterTemp ?? null;
+  waterVolumeMl.value = note.waterVolumeMl ?? null;
+  rinseCount.value = note.rinseCount ?? null;
+  infusionsCount.value = note.infusionsCount ?? null;
+  timeValue.value = note.timeValue ?? null;
+  liquorColor.value = note.liquorColor ?? '';
+  mouthfeel.value = note.mouthfeel ?? '';
+  energyEffect.value = note.energyEffect ?? '';
+  noteColor.value = note.noteColor ?? '';
+  freeText.value = note.freeText ?? '';
+  selectedDescriptorIds.value = [...(note.descriptors ?? [])];
+  ratings.value = {
+    aroma: note.ratings.aroma ?? 0,
+    taste: note.ratings.taste ?? 0,
+    aftertaste: note.ratings.aftertaste ?? 0,
+    balance: note.ratings.balance ?? 0,
+  };
+  for (const key of Object.keys(skippedBasics.value) as OptionalBasicField[]) {
+    skippedBasics.value[key] = Boolean(note.skippedFields?.includes(key));
+  }
+  for (const key of Object.keys(skippedBrew.value) as OptionalBrewField[]) {
+    skippedBrew.value[key] = Boolean(note.skippedFields?.includes(key));
+  }
+  showExtraBasics.value = skippedBasicFields.value.length > 0 || Boolean(originDetail.value || cultivar.value || source.value || processingStyle.value || harvestSeason.value || harvestYear.value);
+  showExtraBrew.value = skippedBrewFields.value.length > 0 || Boolean(waterSource.value || rinseCount.value !== null || infusionsCount.value !== null || brewingMethod.value);
+}
+
+function buildPayload(): NoteRecord {
+  return {
+    id: draftNoteId.value,
+    sessionTitle: sessionTitle.value,
+    teaName: teaName.value,
+    teaType: teaType.value,
+    region: region.value,
+    originDetail: originDetail.value,
+    cultivar: cultivar.value,
+    source: source.value,
+    processingStyle: processingStyle.value,
+    harvestSeason: harvestSeason.value,
+    harvestYear: harvestYear.value,
+    skippedFields: skippedFields.value,
+    brewingMode: brewingMode.value,
+    brewingMethod: brewingMethod.value,
+    waterSource: waterSource.value,
+    setupId: setupId.value || null,
+    setupSummary: buildSetupSummary(setups.value, setupId.value),
+    leafGrams: leafGrams.value,
+    waterTemp: waterTemp.value,
+    waterVolumeMl: waterVolumeMl.value,
+    rinseCount: rinseCount.value,
+    infusionsCount: infusionsCount.value,
+    timeValue: timeValue.value,
+    timeUnit: timeUnit.value,
+    descriptors: selectedDescriptorIds.value,
+    liquorColor: liquorColor.value,
+    mouthfeel: mouthfeel.value,
+    energyEffect: energyEffect.value,
+    noteColor: noteColor.value,
+    freeText: freeText.value,
+    ratings: { ...ratings.value },
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function validateStep(targetStep = step.value) {
+  return getStepValidationError({
+    targetStep,
+    teaName: teaName.value,
+    teaType: teaType.value,
+    region: region.value,
+    leafGrams: leafGrams.value,
+    waterTemp: waterTemp.value,
+    timeValue: timeValue.value,
+    timeMin: timeMin.value,
+    areRatingsComplete: areRatingsComplete.value,
+  });
+}
+
+onMounted(async () => {
   setups.value = listSetups();
+  if (isEditing.value) {
+    const note = await ensureNoteAvailable(editingNoteId.value);
+    if (note) {
+      applyNoteRecord(note);
+      formNotice.value = 'Открыта существующая заметка для редактирования.';
+    }
+    return;
+  }
+  if (route.query.fresh === '1') {
+    discardDraft();
+    return;
+  }
+  const draft = getLatestDraft();
+  if (draft) {
+    applyNoteRecord(draft);
+    formNotice.value = 'Черновик восстановлен. Можно продолжить запись или сохранить итоговую заметку.';
+  }
 });
 
 function nextStep() {
+  const error = validateStep(step.value);
+  if (error) {
+    stepError.value = error;
+    return;
+  }
+  stepError.value = '';
   if (step.value < 4) step.value += 1;
 }
 
@@ -297,48 +474,29 @@ function removeSelectedDescriptor(id: string) {
 }
 
 function saveDraft() {
-  const payload = {
-    sessionTitle: sessionTitle.value,
-    teaName: teaName.value,
-    teaType: teaType.value,
-    region: region.value,
-    originDetail: originDetail.value,
-    cultivar: cultivar.value,
-    source: source.value,
-    processingStyle: processingStyle.value,
-    harvestSeason: harvestSeason.value,
-    harvestYear: harvestYear.value,
-    skippedFields: skippedFields.value,
-    brewingMode: brewingMode.value,
-    brewingMethod: brewingMethod.value,
-    waterSource: waterSource.value,
-    setupId: setupId.value || null,
-    setupSummary: setupId.value ? setups.value.find((x) => x.id === setupId.value)?.items.join(' + ') ?? '' : '',
-    leafGrams: leafGrams.value,
-    waterTemp: waterTemp.value,
-    waterVolumeMl: waterVolumeMl.value,
-    rinseCount: rinseCount.value,
-    infusionsCount: infusionsCount.value,
-    timeValue: timeValue.value,
-    timeUnit: timeUnit.value,
-    descriptors: selectedDescriptorIds.value,
-    liquorColor: liquorColor.value,
-    mouthfeel: mouthfeel.value,
-    energyEffect: energyEffect.value,
-    freeText: freeText.value,
-    ratings: ratings.value,
-    updatedAt: new Date().toISOString(),
-  };
-  localStorage.setItem(NOTES_DRAFT_KEY, JSON.stringify(payload));
-  upsertRecentNote(payload);
+  const payload = saveDraftRecord(buildPayload());
+  draftNoteId.value = payload.id;
+  formNotice.value = 'Черновик сохранён локально. Он не попадёт в журнал, пока ты не завершишь заметку.';
+  stepError.value = '';
 }
 
 function finish() {
-  saveDraft();
-  router.push('/app/notes');
+  const error = validateStep(4);
+  if (error) {
+    stepError.value = error;
+    return;
+  }
+  const saved = publishNote(buildPayload());
+  discardDraft(saved.id);
+  stepError.value = '';
+  router.push(`/app/notes/${saved.id}`);
 }
 
 function goBack() {
+  if (isEditing.value) {
+    router.push(`/app/notes/${editingNoteId.value}`);
+    return;
+  }
   router.push('/app/notes');
 }
 </script>
@@ -347,540 +505,76 @@ function goBack() {
   <main class="page">
     <header class="header">
       <div>
-        <h1>Новая заметка</h1>
+        <h1>{{ isEditing ? 'Редактирование заметки' : 'Новая заметка' }}</h1>
         <p class="subtitle">Шаг {{ step }} из 4</p>
       </div>
-      <button class="btn btn-ghost" @click="goBack">На главную</button>
+      <button class="btn btn-ghost" @click="goBack">К заметкам</button>
     </header>
 
     <section class="progress">
       <div v-for="n in 4" :key="n" class="dot" :class="{ active: n <= step }" />
     </section>
 
+    <p v-if="formNotice" class="notice">{{ formNotice }}</p>
+    <p v-if="stepError" class="error-banner">{{ stepError }}</p>
+
     <section class="card">
-      <div v-if="step === 1" class="step-shell">
-        <div class="step-intro">
-          <h2>Паспорт чая</h2>
-          <p>{{ stepIntroCopy }}</p>
-        </div>
-        <div class="field-grid">
-          <label class="field field-span-2">
-            <span class="field-title">Название сессии / церемонии</span>
-            <input v-model="sessionTitle" type="text" placeholder="Например, Утренний гунфу, Вечерний утёсный улун, Дегустация с друзьями" />
-          </label>
-          <label class="field field-span-2">
-            <span class="field-title">Название чая</span>
-            <input v-model="teaName" type="text" placeholder="Например, Лао Бан Чжан, Да Хун Пао, Бай Му Дань" />
-          </label>
-          <label class="field">
-            <span class="field-title">Тип</span>
-            <select v-model="teaType">
-              <option value="">Выбери тип</option>
-              <option v-for="option in teaTypeOptions" :key="option" :value="option">{{ option }}</option>
-            </select>
-          </label>
-          <label class="field">
-            <span class="field-title">Провинция / регион</span>
-            <input v-model="region" list="region-suggestions" type="text" placeholder="Начни вводить регион" />
-          </label>
-        </div>
+      <NoteBasicsStep
+        v-if="step === 1"
+        :step-intro-copy="stepIntroCopy"
+        :fields="basicFields"
+        :basics-expanded="basicsExpanded"
+        :skipped-basics="skippedBasics"
+        :tea-type-options="teaTypeOptions"
+        :region-suggestions="regionSuggestions"
+        :origin-suggestions="originSuggestions"
+        :cultivar-suggestions="cultivarSuggestions"
+        :source-options="sourceOptions"
+        :processing-style-options="processingStyleOptions"
+        :toggle-extra-basics="() => (showExtraBasics = !showExtraBasics)"
+        :set-basic-field-skipped="setBasicFieldSkipped"
+      />
 
-        <div class="optional-block">
-          <div class="optional-head">
-            <div>
-              <h3>Дополнительные детали о чае</h3>
-              <p class="optional-copy">Происхождение, сезон, культивар и стиль обработки помогут отличать похожие чаи. У каждого поля можно явно отметить, что ты его не указываешь.</p>
-            </div>
-            <button
-              class="mini-btn"
-              type="button"
-              @click="showExtraBasics = !showExtraBasics"
-            >
-              {{ basicsExpanded ? 'Скрыть опциональные поля' : 'Показать опциональные поля' }}
-            </button>
-          </div>
+      <NoteBrewStep
+        v-else-if="step === 2"
+        :step-intro-copy="stepIntroCopy"
+        :fields="brewFields"
+        :time-label="timeLabel"
+        :time-unit="timeUnit"
+        :time-min="timeMin"
+        :time-max="timeMax"
+        :brew-expanded="brewExpanded"
+        :skipped-brew="skippedBrew"
+        :water-source-options="waterSourceOptions"
+        :toggle-extra-brew="() => (showExtraBrew = !showExtraBrew)"
+        :set-brew-field-skipped="setBrewFieldSkipped"
+      />
 
-          <div v-if="basicsExpanded" class="field-grid optional-grid">
-            <div class="field field-span-2" :class="{ 'field-skipped': skippedBasics.originDetail }">
-              <div class="field-head">
-                <span class="field-title">Точное происхождение</span>
-                <button v-if="!skippedBasics.originDetail" type="button" class="field-skip-btn" @click="setBasicFieldSkipped('originDetail', true)">Не указываю</button>
-                <button v-else type="button" class="field-skip-btn active" @click="setBasicFieldSkipped('originDetail', false)">Заполнить</button>
-              </div>
-              <template v-if="!skippedBasics.originDetail">
-                <p class="field-note">Можно выбрать из подсказок или вписать своё.</p>
-                <input
-                  v-model="originDetail"
-                  list="origin-suggestions"
-                  type="text"
-                  placeholder="Гора, деревня, сад, фабрика, участок"
-                />
-              </template>
-              <div v-else class="field-skipped-state">Поле пропущено осознанно</div>
-            </div>
+      <NoteDescriptorsStep
+        v-else-if="step === 3"
+        :state="descriptorState"
+        :wheel-descriptors="wheelDescriptors"
+        :wheel-center-label="wheelCenterLabel"
+        :wheel-center-sub-label="wheelCenterSubLabel"
+        :descriptor-depth="descriptorDepth"
+        :preview-subcategories="previewSubcategories"
+        :descriptor-breadcrumb="descriptorBreadcrumb"
+        :selected-descriptors="selectedDescriptors"
+        :selected-limit="selectedLimit"
+        :toggle-descriptor="toggleDescriptor"
+        :go-descriptor-back="goDescriptorBack"
+        :clear-selected-descriptors="clearSelectedDescriptors"
+        :remove-selected-descriptor="removeSelectedDescriptor"
+      />
 
-            <div class="field" :class="{ 'field-skipped': skippedBasics.cultivar }">
-              <div class="field-head">
-                <span class="field-title">Культивар / материал</span>
-                <button v-if="!skippedBasics.cultivar" type="button" class="field-skip-btn" @click="setBasicFieldSkipped('cultivar', true)">Не указываю</button>
-                <button v-else type="button" class="field-skip-btn active" @click="setBasicFieldSkipped('cultivar', false)">Заполнить</button>
-              </div>
-              <template v-if="!skippedBasics.cultivar">
-                <p class="field-note">Популярные варианты доступны в подсказках.</p>
-                <input
-                  v-model="cultivar"
-                  list="cultivar-suggestions"
-                  type="text"
-                  placeholder="Например, Цин Синь или Да Е Чжун"
-                />
-              </template>
-              <div v-else class="field-skipped-state">Поле пропущено осознанно</div>
-            </div>
-
-            <div class="field" :class="{ 'field-skipped': skippedBasics.source }">
-              <div class="field-head">
-                <span class="field-title">Источник</span>
-                <button v-if="!skippedBasics.source" type="button" class="field-skip-btn" @click="setBasicFieldSkipped('source', true)">Не указываю</button>
-                <button v-else type="button" class="field-skip-btn active" @click="setBasicFieldSkipped('source', false)">Заполнить</button>
-              </div>
-              <template v-if="!skippedBasics.source">
-                <p class="field-note">Вместо свободного текста можно выбрать готовый сценарий.</p>
-                <select v-model="source">
-                  <option value="">Выбери источник</option>
-                  <option v-for="option in sourceOptions" :key="option" :value="option">{{ option }}</option>
-                </select>
-              </template>
-              <div v-else class="field-skipped-state">Поле пропущено осознанно</div>
-            </div>
-
-            <div class="field" :class="{ 'field-skipped': skippedBasics.harvestSeason }">
-              <div class="field-head">
-                <span class="field-title">Сезон сбора</span>
-                <button v-if="!skippedBasics.harvestSeason" type="button" class="field-skip-btn" @click="setBasicFieldSkipped('harvestSeason', true)">Не указываю</button>
-                <button v-else type="button" class="field-skip-btn active" @click="setBasicFieldSkipped('harvestSeason', false)">Заполнить</button>
-              </div>
-              <template v-if="!skippedBasics.harvestSeason">
-                <p class="field-note">Сезон проще выбрать из шаблона, чем вводить руками.</p>
-                <select v-model="harvestSeason">
-                  <option value="">Выбери сезон</option>
-                  <option value="spring">Весна</option>
-                  <option value="summer">Лето</option>
-                  <option value="autumn">Осень</option>
-                  <option value="winter">Зима</option>
-                </select>
-              </template>
-              <div v-else class="field-skipped-state">Поле пропущено осознанно</div>
-            </div>
-
-            <div class="field" :class="{ 'field-skipped': skippedBasics.harvestYear }">
-              <div class="field-head">
-                <span class="field-title">Год сбора</span>
-                <button v-if="!skippedBasics.harvestYear" type="button" class="field-skip-btn" @click="setBasicFieldSkipped('harvestYear', true)">Не указываю</button>
-                <button v-else type="button" class="field-skip-btn active" @click="setBasicFieldSkipped('harvestYear', false)">Заполнить</button>
-              </div>
-              <template v-if="!skippedBasics.harvestYear">
-                <p class="field-note">Если год неизвестен, лучше явно пропустить поле, чем оставлять случайное значение.</p>
-                <input
-                  v-model.number="harvestYear"
-                  type="number"
-                  min="1980"
-                  max="2100"
-                  step="1"
-                  placeholder="2024"
-                />
-              </template>
-              <div v-else class="field-skipped-state">Поле пропущено осознанно</div>
-            </div>
-
-            <div class="field field-span-2" :class="{ 'field-skipped': skippedBasics.processingStyle }">
-              <div class="field-head">
-                <span class="field-title">Обработка / стиль партии</span>
-                <button v-if="!skippedBasics.processingStyle" type="button" class="field-skip-btn" @click="setBasicFieldSkipped('processingStyle', true)">Не указываю</button>
-                <button v-else type="button" class="field-skip-btn active" @click="setBasicFieldSkipped('processingStyle', false)">Заполнить</button>
-              </div>
-              <template v-if="!skippedBasics.processingStyle">
-                <p class="field-note">Для самых частых случаев доступны готовые варианты.</p>
-                <select v-model="processingStyle">
-                  <option value="">Выбери стиль обработки</option>
-                  <option v-for="option in processingStyleOptions" :key="option" :value="option">{{ option }}</option>
-                </select>
-              </template>
-              <div v-else class="field-skipped-state">Поле пропущено осознанно</div>
-            </div>
-          </div>
-        </div>
-
-        <datalist id="region-suggestions">
-          <option v-for="option in regionSuggestions" :key="option" :value="option" />
-        </datalist>
-        <datalist id="origin-suggestions">
-          <option v-for="option in originSuggestions" :key="option" :value="option" />
-        </datalist>
-        <datalist id="cultivar-suggestions">
-          <option v-for="option in cultivarSuggestions" :key="option" :value="option" />
-        </datalist>
-      </div>
-
-      <div v-else-if="step === 2" class="step-shell">
-        <div class="step-intro">
-          <h2>Параметры сессии</h2>
-          <p>{{ stepIntroCopy }}</p>
-        </div>
-        <div class="field-grid session-basics-grid">
-          <label class="field">
-            <span class="field-title">Режим заваривания</span>
-            <select v-model="brewingMode">
-              <option value="gongfu">Проливами (гунфу)</option>
-              <option value="steep">Настоем (1 заваривание)</option>
-              <option value="coldbrew">Cold brew (холодный настой)</option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span class="field-title">Комплект посуды</span>
-            <select v-model="setupId">
-              <option value="">Без сетапа</option>
-              <option v-for="setup in setups" :key="setup.id" :value="setup.id">{{ setup.name }}</option>
-            </select>
-          </label>
-        </div>
-
-        <p class="setup-hint" v-if="setupId">
-          Состав сетапа: {{ setups.find((x) => x.id === setupId)?.items.join(' + ') }}
-        </p>
-
-        <section class="metric-section">
-          <div class="metric-section-head">
-            <h3>Главные параметры</h3>
-            <p>Самое важное для повторения удачной сессии: лист, вода, температура и время.</p>
-          </div>
-
-          <div class="brew-params brew-params-primary">
-            <div class="param">
-              <span class="param-label">Лист</span>
-              <div class="param-input">
-                <input v-model.number="leafGrams" type="number" min="0" step="0.1" placeholder="7" />
-                <span class="unit">г</span>
-              </div>
-            </div>
-            <div class="param">
-              <span class="param-label">Объём воды</span>
-              <div class="param-input">
-                <input v-model.number="waterVolumeMl" type="number" min="0" step="1" placeholder="100" />
-                <span class="unit">мл</span>
-              </div>
-            </div>
-            <div class="param">
-              <span class="param-label">Температура воды</span>
-              <div class="param-input">
-                <input v-model.number="waterTemp" type="number" min="0" max="100" step="1" placeholder="95" />
-                <span class="unit">°C</span>
-              </div>
-            </div>
-            <div class="param">
-              <span class="param-label">{{ timeLabel }}</span>
-              <div class="param-input">
-                <input v-model.number="timeValue" type="number" :min="timeMin" :max="timeMax" step="1" placeholder="10" />
-                <span class="unit">{{ timeUnit }}</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <div class="optional-block">
-          <div class="optional-head">
-            <div>
-              <h3>Тонкие параметры сессии</h3>
-              <p class="optional-copy">Для тех случаев, когда хочется зафиксировать воду, промывку и число проливов.</p>
-            </div>
-            <button
-              class="mini-btn"
-              type="button"
-              @click="showExtraBrew = !showExtraBrew"
-            >
-              {{ brewExpanded ? 'Скрыть опциональные поля' : 'Показать опциональные поля' }}
-            </button>
-          </div>
-
-          <div v-if="brewExpanded" class="field-grid optional-grid">
-            <div class="field" :class="{ 'field-skipped': skippedBrew.waterSource }">
-              <div class="field-head">
-                <span class="field-title">Тип воды</span>
-                <button v-if="!skippedBrew.waterSource" type="button" class="field-skip-btn" @click="setBrewFieldSkipped('waterSource', true)">Не указываю</button>
-                <button v-else type="button" class="field-skip-btn active" @click="setBrewFieldSkipped('waterSource', false)">Заполнить</button>
-              </div>
-              <template v-if="!skippedBrew.waterSource">
-                <p class="field-note">Лучше короткий шаблон, чем длинное пояснение.</p>
-                <select v-model="waterSource">
-                  <option value="">Выбери тип воды</option>
-                  <option v-for="option in waterSourceOptions" :key="option" :value="option">{{ option }}</option>
-                </select>
-              </template>
-              <div v-else class="field-skipped-state">Поле пропущено осознанно</div>
-            </div>
-
-            <div class="field" :class="{ 'field-skipped': skippedBrew.rinseCount }">
-              <div class="field-head">
-                <span class="field-title">Промывка</span>
-                <button v-if="!skippedBrew.rinseCount" type="button" class="field-skip-btn" @click="setBrewFieldSkipped('rinseCount', true)">Не указываю</button>
-                <button v-else type="button" class="field-skip-btn active" @click="setBrewFieldSkipped('rinseCount', false)">Заполнить</button>
-              </div>
-              <template v-if="!skippedBrew.rinseCount">
-                <p class="field-note">Укажи, если промывка реально влияет на твой ритуал.</p>
-                <div class="param-inline">
-                  <input v-model.number="rinseCount" type="number" min="0" max="5" step="1" placeholder="1" />
-                  <span class="unit">раз</span>
-                </div>
-              </template>
-              <div v-else class="field-skipped-state">Поле пропущено осознанно</div>
-            </div>
-
-            <div class="field" :class="{ 'field-skipped': skippedBrew.infusionsCount }">
-              <div class="field-head">
-                <span class="field-title">Итог проливов</span>
-                <button v-if="!skippedBrew.infusionsCount" type="button" class="field-skip-btn" @click="setBrewFieldSkipped('infusionsCount', true)">Не указываю</button>
-                <button v-else type="button" class="field-skip-btn active" @click="setBrewFieldSkipped('infusionsCount', false)">Заполнить</button>
-              </div>
-              <template v-if="!skippedBrew.infusionsCount">
-                <p class="field-note">Полезно, если хочешь сравнивать живучесть разных партий.</p>
-                <div class="param-inline">
-                  <input v-model.number="infusionsCount" type="number" min="1" max="30" step="1" placeholder="7" />
-                  <span class="unit">шт</span>
-                </div>
-              </template>
-              <div v-else class="field-skipped-state">Поле пропущено осознанно</div>
-            </div>
-
-            <div class="field" :class="{ 'field-skipped': skippedBrew.brewingMethod }">
-              <div class="field-head">
-                <span class="field-title">Комментарии к сессии</span>
-                <button v-if="!skippedBrew.brewingMethod" type="button" class="field-skip-btn" @click="setBrewFieldSkipped('brewingMethod', true)">Не указываю</button>
-                <button v-else type="button" class="field-skip-btn active" @click="setBrewFieldSkipped('brewingMethod', false)">Заполнить</button>
-              </div>
-              <template v-if="!skippedBrew.brewingMethod">
-                <p class="field-note">Сюда удобно записать посуду, ритм проливов или другие детали процесса.</p>
-                <input
-                  v-model="brewingMethod"
-                  type="text"
-                  placeholder="Гайвань 100 мл, быстрые проливы, чай предварительно прогрет"
-                />
-              </template>
-              <div v-else class="field-skipped-state">Поле пропущено осознанно</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div v-else-if="step === 3" class="step-shell descriptor-step">
-        <div class="step-intro">
-          <h2>Дескрипторный круг</h2>
-          <p>
-            Сначала выбери большое семейство, потом сузь поиск до подгруппы, а затем раскрой круг ещё сильнее, чтобы
-            поймать точную ноту.
-          </p>
-        </div>
-
-        <div class="descriptor-layout">
-          <section class="descriptor-panel">
-            <div class="descriptor-toolbar">
-              <div class="crumbs">
-                <template v-for="(crumb, index) in descriptorBreadcrumb" :key="`${crumb}-${index}`">
-                  <span class="crumb" :class="{ active: index === descriptorBreadcrumb.length - 1 }">{{ crumb }}</span>
-                  <span v-if="index < descriptorBreadcrumb.length - 1" class="crumb-separator">›</span>
-                </template>
-              </div>
-            </div>
-
-            <DescriptorWheel
-              :descriptors="wheelDescriptors"
-              :selected-ids="selectedDescriptorIds"
-              :center-label="wheelCenterLabel"
-              :center-sub-label="wheelCenterSubLabel"
-              :center-clickable="Boolean(activeFamilyId)"
-              :expanding-id="expandingNodeId"
-              :fade-others="Boolean(expandingNodeId)"
-              :zoom-level="descriptorDepth"
-              :preview-subcategories="previewSubcategories"
-              :show-sub-preview="!activeGroup"
-              @toggle="toggleDescriptor"
-              @center-click="goDescriptorBack"
-            />
-          </section>
-
-          <aside class="selected">
-            <div class="selected-head">
-              <div>
-                <h3>Ноты сессии</h3>
-                <p class="hint">Можно выбрать до {{ selectedLimit }} точных нот для одной записи.</p>
-              </div>
-              <div class="selected-meta">
-                <span class="selected-count">{{ selectedDescriptorIds.length }}/{{ selectedLimit }}</span>
-                <button
-                  v-if="selectedDescriptorIds.length"
-                  class="mini-btn ghost"
-                  type="button"
-                  @click="clearSelectedDescriptors"
-                >
-                  Очистить
-                </button>
-              </div>
-            </div>
-
-            <div v-if="selectedDescriptors.length > 0" class="selected-tags">
-              <button
-                v-for="item in selectedDescriptors"
-                :key="item.id"
-                class="descriptor-tag"
-                type="button"
-                :title="item.fullLabel"
-                @click="removeSelectedDescriptor(item.id)"
-              >
-                <span class="descriptor-dot" :style="{ background: item.color }" />
-                <span>{{ item.shortLabel }}</span>
-                <span class="tag-remove">×</span>
-              </button>
-            </div>
-            <p v-else class="hint">Выбери сначала семейство, затем подгруппу и в финале конкретную ноту.</p>
-
-            <div class="descriptor-notes">
-              <h4>Как читать круг</h4>
-              <ul>
-                <li>1-й уровень: большие вкусовые семьи.</li>
-                <li>2-й уровень: более точные направления внутри семьи.</li>
-                <li>3-й уровень: конкретная нота чашки.</li>
-              </ul>
-            </div>
-          </aside>
-        </div>
-      </div>
-
-      <div v-else class="step-shell final-step-shell">
-        <div class="step-intro">
-          <h2>Финальный профиль чашки</h2>
-          <p>{{ stepIntroCopy }}</p>
-        </div>
-
-        <section class="finish-top-card">
-          <div class="final-section-head">
-            <div>
-              <h3>Дополнительные ощущения чашки</h3>
-              <p>Короткий профиль настоя и состояния после сессии.</p>
-            </div>
-          </div>
-
-          <div class="finish-top-fields">
-            <label class="field finish-field-compact">
-              <span class="field-title">Цвет настоя</span>
-              <p class="field-note">Визуальный образ чашки.</p>
-              <select v-model="liquorColor">
-                <option value="">Выбери оттенок</option>
-                <option value="very-light">Очень светлый</option>
-                <option value="gold">Золотистый</option>
-                <option value="amber">Янтарный</option>
-                <option value="orange">Оранжево-медный</option>
-                <option value="red-brown">Красно-коричневый</option>
-                <option value="dark">Темный</option>
-              </select>
-            </label>
-
-            <label class="field finish-field-compact">
-              <span class="field-title">Тело / текстура</span>
-              <p class="field-note">Как ощущается чай во рту.</p>
-              <select v-model="mouthfeel">
-                <option value="">Выбери текстуру</option>
-                <option value="airy">Воздушное</option>
-                <option value="silky">Шелковистое</option>
-                <option value="juicy">Сочное</option>
-                <option value="oily">Маслянистое</option>
-                <option value="dense">Плотное</option>
-                <option value="drying">Подсушивающее</option>
-              </select>
-            </label>
-
-            <label class="field finish-field-compact">
-              <span class="field-title">Энергия / состояние</span>
-              <p class="field-note">Общий эффект после сессии.</p>
-              <select v-model="energyEffect">
-                <option value="">Выбери состояние</option>
-                <option value="quiet">Спокойное, созерцательное</option>
-                <option value="warm">Теплое, расслабляющее</option>
-                <option value="focused">Собранное, фокусирующее</option>
-                <option value="uplifting">Поднимающее, яркое</option>
-                <option value="strong">Сильное, телесное</option>
-              </select>
-            </label>
-          </div>
-        </section>
-
-        <section class="final-secondary-grid">
-          <section class="ratings">
-            <div class="final-section-head">
-              <div>
-                <h3>Оценки по категориям</h3>
-                <p>Оцени сессию по четырём ключевым ощущениям чашки.</p>
-              </div>
-            </div>
-            <div class="rating-row">
-              <span>Аромат</span>
-              <div class="stars">
-                <button v-for="n in 5" :key="`aroma-${n}`" class="star" type="button" @click="setRating('aroma', n)">
-                  {{ n <= ratings.aroma ? '★' : '☆' }}
-                </button>
-              </div>
-            </div>
-            <div class="rating-row">
-              <span>Вкус</span>
-              <div class="stars">
-                <button v-for="n in 5" :key="`taste-${n}`" class="star" type="button" @click="setRating('taste', n)">
-                  {{ n <= ratings.taste ? '★' : '☆' }}
-                </button>
-              </div>
-            </div>
-            <div class="rating-row">
-              <span>Послевкусие</span>
-              <div class="stars">
-                <button
-                  v-for="n in 5"
-                  :key="`aftertaste-${n}`"
-                  class="star"
-                  type="button"
-                  @click="setRating('aftertaste', n)"
-                >
-                  {{ n <= ratings.aftertaste ? '★' : '☆' }}
-                </button>
-              </div>
-            </div>
-            <div class="rating-row">
-              <span>Баланс</span>
-              <div class="stars">
-                <button v-for="n in 5" :key="`balance-${n}`" class="star" type="button" @click="setRating('balance', n)">
-                  {{ n <= ratings.balance ? '★' : '☆' }}
-                </button>
-              </div>
-            </div>
-            <div class="rating-summary">
-              <span class="rating-summary-label">Средняя оценка</span>
-              <strong class="rating-summary-value">{{ ratingsAverage }}/5</strong>
-            </div>
-          </section>
-
-          <section class="notes-panel final-notes">
-            <div class="final-section-head">
-              <div>
-                <h3>Свободные заметки</h3>
-                <p>Коротко опиши, как раскрывался чай и что особенно запомнилось.</p>
-              </div>
-            </div>
-            <label class="field field-span-all notes-field">
-              <textarea
-                v-model="freeText"
-              rows="11"
-                placeholder="Как раскрывался чай по проливам, где появилась сладость, какое было тело, что случилось в конце..."
-              />
-            </label>
-          </section>
-        </section>
-      </div>
+      <NoteFinishStep
+        v-else
+        :step-intro-copy="stepIntroCopy"
+        :fields="finishFields"
+        :ratings-average="ratingsAverage"
+        :note-color-options="noteColorOptions"
+        :set-rating="setRating"
+      />
     </section>
 
     <footer class="footer">
@@ -888,7 +582,7 @@ function goBack() {
       <div class="right-actions">
         <button class="btn btn-ghost" @click="saveDraft">Сохранить черновик</button>
         <button v-if="step < 4" class="btn btn-primary" @click="nextStep">Далее</button>
-        <button v-else class="btn btn-primary" :disabled="!areRatingsComplete" @click="finish">Сохранить заметку</button>
+        <button v-else class="btn btn-primary" @click="finish">{{ isEditing ? 'Сохранить изменения' : 'Сохранить заметку' }}</button>
       </div>
     </footer>
   </main>
@@ -919,6 +613,27 @@ function goBack() {
 .subtitle {
   margin: 4px 0 0;
   color: #58715b;
+}
+
+.notice,
+.error-banner {
+  max-width: 1080px;
+  margin: 0 auto 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.notice {
+  border: 1px solid #dbe8d7;
+  background: #f7fbf5;
+  color: #47634c;
+}
+
+.error-banner {
+  border: 1px solid #f0c8cf;
+  background: #fff7f8;
+  color: #8d2f40;
 }
 
 .progress {
@@ -1384,6 +1099,51 @@ textarea:focus {
   background: #fbfdf9;
 }
 
+.note-color-panel {
+  align-content: start;
+}
+
+.color-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.color-chip {
+  border: 1px solid #d7e5d2;
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+  color: #35513a;
+}
+
+.color-chip.active {
+  border-color: #2f7b3d;
+  box-shadow: inset 0 0 0 1px #2f7b3d;
+}
+
+.color-chip-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  flex: 0 0 18px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.65), 0 0 0 1px rgba(73,101,79,0.14);
+}
+
+.color-chip.empty .color-chip-swatch {
+  background: linear-gradient(135deg, #eef4ea 0%, #d9e6d5 100%);
+}
+
+.color-chip-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .notes-field {
   padding: 0;
   border: 0;
@@ -1521,6 +1281,7 @@ textarea:focus {
   .field-grid,
   .finish-top-fields,
   .final-secondary-grid,
+  .color-picker,
   .descriptor-layout {
     grid-template-columns: 1fr;
   }

@@ -3,6 +3,7 @@ import AnalyticsPage from '../pages/AnalyticsPage.vue';
 import AppShellPage from '../pages/AppShellPage.vue';
 import FeedPage from '../pages/FeedPage.vue';
 import LandingPage from '../pages/LandingPage.vue';
+import NoteDetailPage from '../pages/NoteDetailPage.vue';
 import NewNotePage from '../pages/NewNotePage.vue';
 import NotesPage from '../pages/NotesPage.vue';
 import ProfilePage from '../pages/ProfilePage.vue';
@@ -24,6 +25,9 @@ const router = createRouter({
       children: [
         { path: '', redirect: '/app/notes' },
         { path: 'notes', name: 'app-notes', component: NotesPage },
+        { path: 'notes/new', name: 'app-new-note', component: NewNotePage },
+        { path: 'notes/:noteId', name: 'app-note-detail', component: NoteDetailPage },
+        { path: 'notes/:noteId/edit', name: 'edit-note', component: NewNotePage },
         { path: 'vessels', name: 'app-vessels', component: VesselsPage },
         { path: 'analytics', name: 'app-analytics', component: AnalyticsPage },
         { path: 'profile', name: 'app-profile', component: ProfilePage },
@@ -32,9 +36,7 @@ const router = createRouter({
     },
     {
       path: '/notes/new',
-      name: 'new-note',
-      component: NewNotePage,
-      meta: { requiresAuth: true },
+      redirect: (to) => ({ name: 'app-new-note', query: to.query }),
     },
   ],
 });

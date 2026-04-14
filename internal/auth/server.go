@@ -103,3 +103,20 @@ func (s *Server) Validate(ctx context.Context, req *authv1.ValidateRequest) (*au
 	}
 	return &authv1.ValidateResponse{UserId: userID, Ok: true}, nil
 }
+
+func (s *Server) RefreshSession(ctx context.Context, req *authv1.RefreshSessionRequest) (*authv1.RefreshSessionResponse, error) {
+	userID, err := ValidateToken(s.jwtSecret, req.GetRefreshToken())
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "invalid refresh token")
+	}
+
+	accessToken, refreshToken, err := Issue(s.jwtSecret, userID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &authv1.RefreshSessionResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
+}

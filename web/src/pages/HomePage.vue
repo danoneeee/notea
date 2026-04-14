@@ -33,7 +33,7 @@ function goToLanding() {
 }
 
 function goToNewNote() {
-  router.push('/notes/new');
+  router.push({ name: 'app-new-note' });
 }
 
 function logout() {

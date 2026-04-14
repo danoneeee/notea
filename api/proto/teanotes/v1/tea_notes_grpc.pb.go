@@ -24,6 +24,10 @@ const (
 	TeaNotesService_ListSessions_FullMethodName             = "/teanotes.v1.TeaNotesService/ListSessions"
 	TeaNotesService_ListTeas_FullMethodName                 = "/teanotes.v1.TeaNotesService/ListTeas"
 	TeaNotesService_ListDescriptorCategories_FullMethodName = "/teanotes.v1.TeaNotesService/ListDescriptorCategories"
+	TeaNotesService_UpsertTeaNote_FullMethodName            = "/teanotes.v1.TeaNotesService/UpsertTeaNote"
+	TeaNotesService_GetTeaNote_FullMethodName               = "/teanotes.v1.TeaNotesService/GetTeaNote"
+	TeaNotesService_ListTeaNotes_FullMethodName             = "/teanotes.v1.TeaNotesService/ListTeaNotes"
+	TeaNotesService_DeleteTeaNote_FullMethodName            = "/teanotes.v1.TeaNotesService/DeleteTeaNote"
 )
 
 // TeaNotesServiceClient is the client API for TeaNotesService service.
@@ -41,6 +45,11 @@ type TeaNotesServiceClient interface {
 	// Справочник чаёв: сорт + провинция.
 	ListTeas(ctx context.Context, in *ListTeasRequest, opts ...grpc.CallOption) (*ListTeasResponse, error)
 	ListDescriptorCategories(ctx context.Context, in *ListDescriptorCategoriesRequest, opts ...grpc.CallOption) (*ListDescriptorCategoriesResponse, error)
+	// Журнал дегустаций (модель как NoteRecord во фронте). Требует Authorization: Bearer <JWT>.
+	UpsertTeaNote(ctx context.Context, in *UpsertTeaNoteRequest, opts ...grpc.CallOption) (*UpsertTeaNoteResponse, error)
+	GetTeaNote(ctx context.Context, in *GetTeaNoteRequest, opts ...grpc.CallOption) (*GetTeaNoteResponse, error)
+	ListTeaNotes(ctx context.Context, in *ListTeaNotesRequest, opts ...grpc.CallOption) (*ListTeaNotesResponse, error)
+	DeleteTeaNote(ctx context.Context, in *DeleteTeaNoteRequest, opts ...grpc.CallOption) (*DeleteTeaNoteResponse, error)
 }
 
 type teaNotesServiceClient struct {
@@ -101,6 +110,46 @@ func (c *teaNotesServiceClient) ListDescriptorCategories(ctx context.Context, in
 	return out, nil
 }
 
+func (c *teaNotesServiceClient) UpsertTeaNote(ctx context.Context, in *UpsertTeaNoteRequest, opts ...grpc.CallOption) (*UpsertTeaNoteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpsertTeaNoteResponse)
+	err := c.cc.Invoke(ctx, TeaNotesService_UpsertTeaNote_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *teaNotesServiceClient) GetTeaNote(ctx context.Context, in *GetTeaNoteRequest, opts ...grpc.CallOption) (*GetTeaNoteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetTeaNoteResponse)
+	err := c.cc.Invoke(ctx, TeaNotesService_GetTeaNote_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *teaNotesServiceClient) ListTeaNotes(ctx context.Context, in *ListTeaNotesRequest, opts ...grpc.CallOption) (*ListTeaNotesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListTeaNotesResponse)
+	err := c.cc.Invoke(ctx, TeaNotesService_ListTeaNotes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *teaNotesServiceClient) DeleteTeaNote(ctx context.Context, in *DeleteTeaNoteRequest, opts ...grpc.CallOption) (*DeleteTeaNoteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteTeaNoteResponse)
+	err := c.cc.Invoke(ctx, TeaNotesService_DeleteTeaNote_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TeaNotesServiceServer is the server API for TeaNotesService service.
 // All implementations must embed UnimplementedTeaNotesServiceServer
 // for forward compatibility.
@@ -116,6 +165,11 @@ type TeaNotesServiceServer interface {
 	// Справочник чаёв: сорт + провинция.
 	ListTeas(context.Context, *ListTeasRequest) (*ListTeasResponse, error)
 	ListDescriptorCategories(context.Context, *ListDescriptorCategoriesRequest) (*ListDescriptorCategoriesResponse, error)
+	// Журнал дегустаций (модель как NoteRecord во фронте). Требует Authorization: Bearer <JWT>.
+	UpsertTeaNote(context.Context, *UpsertTeaNoteRequest) (*UpsertTeaNoteResponse, error)
+	GetTeaNote(context.Context, *GetTeaNoteRequest) (*GetTeaNoteResponse, error)
+	ListTeaNotes(context.Context, *ListTeaNotesRequest) (*ListTeaNotesResponse, error)
+	DeleteTeaNote(context.Context, *DeleteTeaNoteRequest) (*DeleteTeaNoteResponse, error)
 	mustEmbedUnimplementedTeaNotesServiceServer()
 }
 
@@ -140,6 +194,18 @@ func (UnimplementedTeaNotesServiceServer) ListTeas(context.Context, *ListTeasReq
 }
 func (UnimplementedTeaNotesServiceServer) ListDescriptorCategories(context.Context, *ListDescriptorCategoriesRequest) (*ListDescriptorCategoriesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListDescriptorCategories not implemented")
+}
+func (UnimplementedTeaNotesServiceServer) UpsertTeaNote(context.Context, *UpsertTeaNoteRequest) (*UpsertTeaNoteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpsertTeaNote not implemented")
+}
+func (UnimplementedTeaNotesServiceServer) GetTeaNote(context.Context, *GetTeaNoteRequest) (*GetTeaNoteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetTeaNote not implemented")
+}
+func (UnimplementedTeaNotesServiceServer) ListTeaNotes(context.Context, *ListTeaNotesRequest) (*ListTeaNotesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListTeaNotes not implemented")
+}
+func (UnimplementedTeaNotesServiceServer) DeleteTeaNote(context.Context, *DeleteTeaNoteRequest) (*DeleteTeaNoteResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteTeaNote not implemented")
 }
 func (UnimplementedTeaNotesServiceServer) mustEmbedUnimplementedTeaNotesServiceServer() {}
 func (UnimplementedTeaNotesServiceServer) testEmbeddedByValue()                         {}
@@ -252,6 +318,78 @@ func _TeaNotesService_ListDescriptorCategories_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TeaNotesService_UpsertTeaNote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpsertTeaNoteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TeaNotesServiceServer).UpsertTeaNote(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TeaNotesService_UpsertTeaNote_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TeaNotesServiceServer).UpsertTeaNote(ctx, req.(*UpsertTeaNoteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TeaNotesService_GetTeaNote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTeaNoteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TeaNotesServiceServer).GetTeaNote(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TeaNotesService_GetTeaNote_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TeaNotesServiceServer).GetTeaNote(ctx, req.(*GetTeaNoteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TeaNotesService_ListTeaNotes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTeaNotesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TeaNotesServiceServer).ListTeaNotes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TeaNotesService_ListTeaNotes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TeaNotesServiceServer).ListTeaNotes(ctx, req.(*ListTeaNotesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TeaNotesService_DeleteTeaNote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteTeaNoteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TeaNotesServiceServer).DeleteTeaNote(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TeaNotesService_DeleteTeaNote_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TeaNotesServiceServer).DeleteTeaNote(ctx, req.(*DeleteTeaNoteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TeaNotesService_ServiceDesc is the grpc.ServiceDesc for TeaNotesService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -278,6 +416,22 @@ var TeaNotesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListDescriptorCategories",
 			Handler:    _TeaNotesService_ListDescriptorCategories_Handler,
+		},
+		{
+			MethodName: "UpsertTeaNote",
+			Handler:    _TeaNotesService_UpsertTeaNote_Handler,
+		},
+		{
+			MethodName: "GetTeaNote",
+			Handler:    _TeaNotesService_GetTeaNote_Handler,
+		},
+		{
+			MethodName: "ListTeaNotes",
+			Handler:    _TeaNotesService_ListTeaNotes_Handler,
+		},
+		{
+			MethodName: "DeleteTeaNote",
+			Handler:    _TeaNotesService_DeleteTeaNote_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

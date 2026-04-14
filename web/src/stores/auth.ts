@@ -54,6 +54,21 @@ function setSession(data: {
   persistSession();
 }
 
+async function tryRefreshSession() {
+  if (!state.refreshToken || state.refreshToken.startsWith('demo:')) {
+    return false;
+  }
+  try {
+    const response = await authService.refreshSession(state.refreshToken);
+    state.accessToken = response.accessToken;
+    state.refreshToken = response.refreshToken;
+    persistSession();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function initialize() {
   if (state.initialized) {
     return;
@@ -71,10 +86,16 @@ async function initialize() {
   try {
     const res = await authService.validate(state.accessToken);
     if (!res.ok) {
-      logout();
+      const refreshed = await tryRefreshSession();
+      if (!refreshed) {
+        logout();
+      }
     }
   } catch {
-    logout();
+    const refreshed = await tryRefreshSession();
+    if (!refreshed) {
+      logout();
+    }
   }
 }
 
@@ -125,6 +146,12 @@ function logout() {
   clearSession();
 }
 
+if (typeof window !== 'undefined') {
+  window.addEventListener('notea-auth-expired', () => {
+    logout();
+  });
+}
+
 export function useAuthStore() {
   return {
     state,
@@ -132,6 +159,7 @@ export function useAuthStore() {
     initialize,
     login,
     register,
+    tryRefreshSession,
     loginDemo,
     logout,
   };

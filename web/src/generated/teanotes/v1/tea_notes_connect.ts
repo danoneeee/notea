@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateSessionRequest, CreateSessionResponse, GetSessionRequest, GetSessionResponse, ListDescriptorCategoriesRequest, ListDescriptorCategoriesResponse, ListSessionsRequest, ListSessionsResponse, ListTeasRequest, ListTeasResponse } from "./tea_notes_pb.ts";
+import { CreateSessionRequest, CreateSessionResponse, DeleteTeaNoteRequest, DeleteTeaNoteResponse, GetSessionRequest, GetSessionResponse, GetTeaNoteRequest, GetTeaNoteResponse, ListDescriptorCategoriesRequest, ListDescriptorCategoriesResponse, ListSessionsRequest, ListSessionsResponse, ListTeaNotesRequest, ListTeaNotesResponse, ListTeasRequest, ListTeasResponse, UpsertTeaNoteRequest, UpsertTeaNoteResponse } from "./tea_notes_pb.ts";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -65,6 +65,44 @@ export const TeaNotesService = {
       name: "ListDescriptorCategories",
       I: ListDescriptorCategoriesRequest,
       O: ListDescriptorCategoriesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * Журнал дегустаций (модель как NoteRecord во фронте). Требует Authorization: Bearer <JWT>.
+     *
+     * @generated from rpc teanotes.v1.TeaNotesService.UpsertTeaNote
+     */
+    upsertTeaNote: {
+      name: "UpsertTeaNote",
+      I: UpsertTeaNoteRequest,
+      O: UpsertTeaNoteResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc teanotes.v1.TeaNotesService.GetTeaNote
+     */
+    getTeaNote: {
+      name: "GetTeaNote",
+      I: GetTeaNoteRequest,
+      O: GetTeaNoteResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc teanotes.v1.TeaNotesService.ListTeaNotes
+     */
+    listTeaNotes: {
+      name: "ListTeaNotes",
+      I: ListTeaNotesRequest,
+      O: ListTeaNotesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc teanotes.v1.TeaNotesService.DeleteTeaNote
+     */
+    deleteTeaNote: {
+      name: "DeleteTeaNote",
+      I: DeleteTeaNoteRequest,
+      O: DeleteTeaNoteResponse,
       kind: MethodKind.Unary,
     },
   }

@@ -45,5 +45,24 @@ func CreateTables(ctx context.Context, pool *pgxpool.Pool) error {
 			PRIMARY KEY (session_id, descriptor_id, kind)
 		);
 	`)
+	if err != nil {
+		return err
+	}
+
+	_, err = pool.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS tea_notes (
+			id         UUID PRIMARY KEY,
+			user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			updated_at TIMESTAMPTZ NOT NULL,
+			body       JSONB NOT NULL
+		);
+	`)
+	if err != nil {
+		return err
+	}
+	_, err = pool.Exec(ctx, `
+		CREATE INDEX IF NOT EXISTS tea_notes_user_updated_idx
+		ON tea_notes (user_id, updated_at DESC);
+	`)
 	return err
 }

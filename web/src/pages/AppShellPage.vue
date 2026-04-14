@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { hydrateNotesFromRemote } from '../services/notes';
 import { useAuthStore } from '../stores/auth';
 
 const route = useRoute();
@@ -9,13 +10,16 @@ const auth = useAuthStore();
 
 const tabs = [
   { name: 'app-notes', label: 'Заметки', to: '/app/notes' },
-  { name: 'app-feed', label: 'Лента', to: '/app/feed' },
   { name: 'app-analytics', label: 'Аналитика', to: '/app/analytics' },
   { name: 'app-profile', label: 'Профиль', to: '/app/profile' },
   { name: 'app-vessels', label: 'Посуда', to: '/app/vessels' },
 ];
 
-const activeTab = computed(() => String(route.name || ''));
+const activeTab = computed(() => {
+  const name = String(route.name || '');
+  if (name === 'app-new-note' || name === 'app-note-detail' || name === 'edit-note') return 'app-notes';
+  return name;
+});
 
 function logout() {
   auth.logout();
@@ -25,6 +29,10 @@ function logout() {
 function goHome() {
   router.push({ name: 'app-notes' });
 }
+
+onMounted(() => {
+  void hydrateNotesFromRemote();
+});
 </script>
 
 <template>
@@ -35,7 +43,6 @@ function goHome() {
         <div class="brand-tagline">личные заметки о чае</div>
         <div class="actions">
           <span class="welcome">Привет, {{ auth.state.userName }}</span>
-          <button class="btn btn-primary" @click="router.push('/notes/new')">Новая заметка</button>
           <button class="btn btn-ghost" @click="logout">Выйти</button>
         </div>
       </div>

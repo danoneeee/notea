@@ -1,12 +1,8 @@
 import { createPromiseClient } from '@bufbuild/connect';
-import { createGrpcWebTransport } from '@bufbuild/connect-web';
 import { AuthService } from '../generated/auth/v1/auth_connect';
+import { rawTransport } from './baseTransport';
 
-const transport = createGrpcWebTransport({
-  baseUrl: import.meta.env.VITE_API_URL ?? 'http://localhost:5173',
-});
-
-const client = createPromiseClient(AuthService, transport);
+const client = createPromiseClient(AuthService, rawTransport);
 
 export function login(email: string, password: string) {
   return client.login({
@@ -25,4 +21,8 @@ export function register(displayName: string, email: string, password: string) {
 
 export function validate(accessToken: string) {
   return client.validate({ accessToken });
+}
+
+export function refreshSession(refreshToken: string) {
+  return client.refreshSession({ refreshToken });
 }

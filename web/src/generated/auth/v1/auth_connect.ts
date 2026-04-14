@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, ValidateRequest, ValidateResponse } from "./auth_pb.ts";
+import { LoginRequest, LoginResponse, RefreshSessionRequest, RefreshSessionResponse, RegisterRequest, RegisterResponse, ValidateRequest, ValidateResponse } from "./auth_pb.ts";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -37,6 +37,15 @@ export const AuthService = {
       name: "Validate",
       I: ValidateRequest,
       O: ValidateResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc auth.v1.AuthService.RefreshSession
+     */
+    refreshSession: {
+      name: "RefreshSession",
+      I: RefreshSessionRequest,
+      O: RefreshSessionResponse,
       kind: MethodKind.Unary,
     },
   }

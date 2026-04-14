@@ -851,3 +851,577 @@ export class ListSessionsResponse extends Message<ListSessionsResponse> {
   }
 }
 
+/**
+ * @generated from message teanotes.v1.NoteRatingsMsg
+ */
+export class NoteRatingsMsg extends Message<NoteRatingsMsg> {
+  /**
+   * @generated from field: int32 aroma = 1;
+   */
+  aroma = 0;
+
+  /**
+   * @generated from field: int32 taste = 2;
+   */
+  taste = 0;
+
+  /**
+   * @generated from field: int32 aftertaste = 3;
+   */
+  aftertaste = 0;
+
+  /**
+   * @generated from field: int32 balance = 4;
+   */
+  balance = 0;
+
+  constructor(data?: PartialMessage<NoteRatingsMsg>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "teanotes.v1.NoteRatingsMsg";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "aroma", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "taste", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "aftertaste", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "balance", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): NoteRatingsMsg {
+    return new NoteRatingsMsg().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): NoteRatingsMsg {
+    return new NoteRatingsMsg().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): NoteRatingsMsg {
+    return new NoteRatingsMsg().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: NoteRatingsMsg | PlainMessage<NoteRatingsMsg> | undefined, b: NoteRatingsMsg | PlainMessage<NoteRatingsMsg> | undefined): boolean {
+    return proto3.util.equals(NoteRatingsMsg, a, b);
+  }
+}
+
+/**
+ * @generated from message teanotes.v1.TeaNote
+ */
+export class TeaNote extends Message<TeaNote> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: optional string session_title = 2;
+   */
+  sessionTitle?: string;
+
+  /**
+   * @generated from field: string tea_name = 3;
+   */
+  teaName = "";
+
+  /**
+   * @generated from field: string tea_type = 4;
+   */
+  teaType = "";
+
+  /**
+   * @generated from field: string region = 5;
+   */
+  region = "";
+
+  /**
+   * @generated from field: optional string origin_detail = 6;
+   */
+  originDetail?: string;
+
+  /**
+   * @generated from field: optional string cultivar = 7;
+   */
+  cultivar?: string;
+
+  /**
+   * @generated from field: optional string source = 8;
+   */
+  source?: string;
+
+  /**
+   * @generated from field: optional string processing_style = 9;
+   */
+  processingStyle?: string;
+
+  /**
+   * @generated from field: optional string harvest_season = 10;
+   */
+  harvestSeason?: string;
+
+  /**
+   * @generated from field: optional int32 harvest_year = 11;
+   */
+  harvestYear?: number;
+
+  /**
+   * @generated from field: repeated string skipped_fields = 12;
+   */
+  skippedFields: string[] = [];
+
+  /**
+   * @generated from field: string brewing_mode = 13;
+   */
+  brewingMode = "";
+
+  /**
+   * @generated from field: string brewing_method = 14;
+   */
+  brewingMethod = "";
+
+  /**
+   * @generated from field: optional string water_source = 15;
+   */
+  waterSource?: string;
+
+  /**
+   * @generated from field: optional string setup_id = 16;
+   */
+  setupId?: string;
+
+  /**
+   * @generated from field: string setup_summary = 17;
+   */
+  setupSummary = "";
+
+  /**
+   * @generated from field: optional double leaf_grams = 18;
+   */
+  leafGrams?: number;
+
+  /**
+   * @generated from field: optional int32 water_temp = 19;
+   */
+  waterTemp?: number;
+
+  /**
+   * @generated from field: optional int32 water_volume_ml = 20;
+   */
+  waterVolumeMl?: number;
+
+  /**
+   * @generated from field: optional int32 rinse_count = 21;
+   */
+  rinseCount?: number;
+
+  /**
+   * @generated from field: optional int32 infusions_count = 22;
+   */
+  infusionsCount?: number;
+
+  /**
+   * @generated from field: optional double time_value = 23;
+   */
+  timeValue?: number;
+
+  /**
+   * @generated from field: string time_unit = 24;
+   */
+  timeUnit = "";
+
+  /**
+   * @generated from field: repeated string descriptors = 25;
+   */
+  descriptors: string[] = [];
+
+  /**
+   * @generated from field: optional string liquor_color = 26;
+   */
+  liquorColor?: string;
+
+  /**
+   * @generated from field: optional string mouthfeel = 27;
+   */
+  mouthfeel?: string;
+
+  /**
+   * @generated from field: optional string energy_effect = 28;
+   */
+  energyEffect?: string;
+
+  /**
+   * @generated from field: string free_text = 29;
+   */
+  freeText = "";
+
+  /**
+   * @generated from field: teanotes.v1.NoteRatingsMsg ratings = 30;
+   */
+  ratings?: NoteRatingsMsg;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp updated_at = 31;
+   */
+  updatedAt?: Timestamp;
+
+  /**
+   * @generated from field: optional string note_color = 32;
+   */
+  noteColor?: string;
+
+  constructor(data?: PartialMessage<TeaNote>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "teanotes.v1.TeaNote";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "session_title", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "tea_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "tea_type", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 5, name: "region", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "origin_detail", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "cultivar", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 8, name: "source", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "processing_style", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 10, name: "harvest_season", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 11, name: "harvest_year", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 12, name: "skipped_fields", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 13, name: "brewing_mode", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 14, name: "brewing_method", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 15, name: "water_source", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 16, name: "setup_id", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 17, name: "setup_summary", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 18, name: "leaf_grams", kind: "scalar", T: 1 /* ScalarType.DOUBLE */, opt: true },
+    { no: 19, name: "water_temp", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 20, name: "water_volume_ml", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 21, name: "rinse_count", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 22, name: "infusions_count", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 23, name: "time_value", kind: "scalar", T: 1 /* ScalarType.DOUBLE */, opt: true },
+    { no: 24, name: "time_unit", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 25, name: "descriptors", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 26, name: "liquor_color", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 27, name: "mouthfeel", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 28, name: "energy_effect", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 29, name: "free_text", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 30, name: "ratings", kind: "message", T: NoteRatingsMsg },
+    { no: 31, name: "updated_at", kind: "message", T: Timestamp },
+    { no: 32, name: "note_color", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TeaNote {
+    return new TeaNote().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): TeaNote {
+    return new TeaNote().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): TeaNote {
+    return new TeaNote().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: TeaNote | PlainMessage<TeaNote> | undefined, b: TeaNote | PlainMessage<TeaNote> | undefined): boolean {
+    return proto3.util.equals(TeaNote, a, b);
+  }
+}
+
+/**
+ * @generated from message teanotes.v1.UpsertTeaNoteRequest
+ */
+export class UpsertTeaNoteRequest extends Message<UpsertTeaNoteRequest> {
+  /**
+   * @generated from field: teanotes.v1.TeaNote note = 1;
+   */
+  note?: TeaNote;
+
+  constructor(data?: PartialMessage<UpsertTeaNoteRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "teanotes.v1.UpsertTeaNoteRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "note", kind: "message", T: TeaNote },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpsertTeaNoteRequest {
+    return new UpsertTeaNoteRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpsertTeaNoteRequest {
+    return new UpsertTeaNoteRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpsertTeaNoteRequest {
+    return new UpsertTeaNoteRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpsertTeaNoteRequest | PlainMessage<UpsertTeaNoteRequest> | undefined, b: UpsertTeaNoteRequest | PlainMessage<UpsertTeaNoteRequest> | undefined): boolean {
+    return proto3.util.equals(UpsertTeaNoteRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message teanotes.v1.UpsertTeaNoteResponse
+ */
+export class UpsertTeaNoteResponse extends Message<UpsertTeaNoteResponse> {
+  /**
+   * @generated from field: teanotes.v1.TeaNote note = 1;
+   */
+  note?: TeaNote;
+
+  constructor(data?: PartialMessage<UpsertTeaNoteResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "teanotes.v1.UpsertTeaNoteResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "note", kind: "message", T: TeaNote },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpsertTeaNoteResponse {
+    return new UpsertTeaNoteResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UpsertTeaNoteResponse {
+    return new UpsertTeaNoteResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UpsertTeaNoteResponse {
+    return new UpsertTeaNoteResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UpsertTeaNoteResponse | PlainMessage<UpsertTeaNoteResponse> | undefined, b: UpsertTeaNoteResponse | PlainMessage<UpsertTeaNoteResponse> | undefined): boolean {
+    return proto3.util.equals(UpsertTeaNoteResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message teanotes.v1.GetTeaNoteRequest
+ */
+export class GetTeaNoteRequest extends Message<GetTeaNoteRequest> {
+  /**
+   * @generated from field: string note_id = 1;
+   */
+  noteId = "";
+
+  constructor(data?: PartialMessage<GetTeaNoteRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "teanotes.v1.GetTeaNoteRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "note_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetTeaNoteRequest {
+    return new GetTeaNoteRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetTeaNoteRequest {
+    return new GetTeaNoteRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetTeaNoteRequest {
+    return new GetTeaNoteRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetTeaNoteRequest | PlainMessage<GetTeaNoteRequest> | undefined, b: GetTeaNoteRequest | PlainMessage<GetTeaNoteRequest> | undefined): boolean {
+    return proto3.util.equals(GetTeaNoteRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message teanotes.v1.GetTeaNoteResponse
+ */
+export class GetTeaNoteResponse extends Message<GetTeaNoteResponse> {
+  /**
+   * @generated from field: teanotes.v1.TeaNote note = 1;
+   */
+  note?: TeaNote;
+
+  constructor(data?: PartialMessage<GetTeaNoteResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "teanotes.v1.GetTeaNoteResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "note", kind: "message", T: TeaNote },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetTeaNoteResponse {
+    return new GetTeaNoteResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetTeaNoteResponse {
+    return new GetTeaNoteResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetTeaNoteResponse {
+    return new GetTeaNoteResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetTeaNoteResponse | PlainMessage<GetTeaNoteResponse> | undefined, b: GetTeaNoteResponse | PlainMessage<GetTeaNoteResponse> | undefined): boolean {
+    return proto3.util.equals(GetTeaNoteResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message teanotes.v1.ListTeaNotesRequest
+ */
+export class ListTeaNotesRequest extends Message<ListTeaNotesRequest> {
+  /**
+   * @generated from field: int32 limit = 1;
+   */
+  limit = 0;
+
+  /**
+   * @generated from field: int32 offset = 2;
+   */
+  offset = 0;
+
+  constructor(data?: PartialMessage<ListTeaNotesRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "teanotes.v1.ListTeaNotesRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListTeaNotesRequest {
+    return new ListTeaNotesRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListTeaNotesRequest {
+    return new ListTeaNotesRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListTeaNotesRequest {
+    return new ListTeaNotesRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListTeaNotesRequest | PlainMessage<ListTeaNotesRequest> | undefined, b: ListTeaNotesRequest | PlainMessage<ListTeaNotesRequest> | undefined): boolean {
+    return proto3.util.equals(ListTeaNotesRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message teanotes.v1.ListTeaNotesResponse
+ */
+export class ListTeaNotesResponse extends Message<ListTeaNotesResponse> {
+  /**
+   * @generated from field: repeated teanotes.v1.TeaNote notes = 1;
+   */
+  notes: TeaNote[] = [];
+
+  constructor(data?: PartialMessage<ListTeaNotesResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "teanotes.v1.ListTeaNotesResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "notes", kind: "message", T: TeaNote, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ListTeaNotesResponse {
+    return new ListTeaNotesResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ListTeaNotesResponse {
+    return new ListTeaNotesResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ListTeaNotesResponse {
+    return new ListTeaNotesResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ListTeaNotesResponse | PlainMessage<ListTeaNotesResponse> | undefined, b: ListTeaNotesResponse | PlainMessage<ListTeaNotesResponse> | undefined): boolean {
+    return proto3.util.equals(ListTeaNotesResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message teanotes.v1.DeleteTeaNoteRequest
+ */
+export class DeleteTeaNoteRequest extends Message<DeleteTeaNoteRequest> {
+  /**
+   * @generated from field: string note_id = 1;
+   */
+  noteId = "";
+
+  constructor(data?: PartialMessage<DeleteTeaNoteRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "teanotes.v1.DeleteTeaNoteRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "note_id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteTeaNoteRequest {
+    return new DeleteTeaNoteRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteTeaNoteRequest {
+    return new DeleteTeaNoteRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteTeaNoteRequest {
+    return new DeleteTeaNoteRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteTeaNoteRequest | PlainMessage<DeleteTeaNoteRequest> | undefined, b: DeleteTeaNoteRequest | PlainMessage<DeleteTeaNoteRequest> | undefined): boolean {
+    return proto3.util.equals(DeleteTeaNoteRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message teanotes.v1.DeleteTeaNoteResponse
+ */
+export class DeleteTeaNoteResponse extends Message<DeleteTeaNoteResponse> {
+  constructor(data?: PartialMessage<DeleteTeaNoteResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "teanotes.v1.DeleteTeaNoteResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeleteTeaNoteResponse {
+    return new DeleteTeaNoteResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeleteTeaNoteResponse {
+    return new DeleteTeaNoteResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeleteTeaNoteResponse {
+    return new DeleteTeaNoteResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: DeleteTeaNoteResponse | PlainMessage<DeleteTeaNoteResponse> | undefined, b: DeleteTeaNoteResponse | PlainMessage<DeleteTeaNoteResponse> | undefined): boolean {
+    return proto3.util.equals(DeleteTeaNoteResponse, a, b);
+  }
+}
+
