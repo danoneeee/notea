@@ -25,6 +25,7 @@
   line-height: 1.5;
 }
 
+
 .field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -107,6 +108,18 @@
   font-weight: 600;
 }
 
+.field-invalid {
+  border-color: #d9534f;
+  background: #fff6f6;
+}
+
+.field-invalid input,
+.field-invalid select,
+.field-invalid textarea {
+  border-color: #d9534f;
+  box-shadow: 0 0 0 2px rgba(217, 83, 79, 0.12);
+}
+
 input,
 select,
 textarea {
@@ -116,6 +129,12 @@ textarea {
   font-size: 14px;
   background: #fff;
   transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #90a59a;
+  opacity: 1;
 }
 
 input:focus,
@@ -209,6 +228,16 @@ textarea:focus {
   padding: 10px;
   display: grid;
   gap: 6px;
+}
+
+.param-invalid {
+  border-color: #d9534f;
+  background: #fff6f6;
+}
+
+.param-invalid input {
+  border-color: #d9534f;
+  box-shadow: 0 0 0 2px rgba(217, 83, 79, 0.12);
 }
 
 .param-label {
@@ -394,6 +423,7 @@ textarea:focus {
   border: 1px solid #dce8d8;
   border-radius: 12px;
   background: #fbfdf9;
+  overflow: hidden;
 }
 
 .finish-top-card,
@@ -402,7 +432,7 @@ textarea:focus {
 }
 
 .ratings {
-  padding: 14px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
 }
@@ -423,11 +453,45 @@ textarea:focus {
   min-height: 42px;
 }
 
-.final-secondary-grid {
+.final-main-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
+}
+
+.note-color-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.final-main-grid > .ratings,
+.final-main-grid > .final-notes {
+  min-height: 280px;
+}
+
+.final-main-grid > .final-notes {
+  display: flex;
+  flex-direction: column;
+}
+
+.final-main-grid > .final-notes .notes-field {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.final-main-grid > .final-notes textarea {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
+  resize: vertical;
 }
 
 .final-section-head {
@@ -435,7 +499,7 @@ textarea:focus {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .final-section-head h3 {
@@ -451,8 +515,137 @@ textarea:focus {
 
 .color-picker {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+}
+
+.favorite-heart {
+  position: relative;
+  border: 1px solid #d7e6d3;
+  background: #ffffff;
+  border-radius: 999px;
+  min-height: 36px;
+  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #48624c;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease, transform 0.18s ease;
+}
+
+.favorite-heart .heart-icon {
+  width: 16px;
+  height: 16px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #7b9195;
+  transform-origin: center;
+  transition: color 0.2s ease;
+}
+
+.favorite-heart .heart-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.favorite-heart .heart-icon path {
+  fill: transparent;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: fill 0.2s ease;
+}
+
+.favorite-heart .heart-label {
+  font-weight: 600;
+}
+
+.favorite-heart:hover {
+  border-color: #b8cfb8;
+  color: #32543a;
+  transform: translateY(-1px);
+}
+
+.favorite-heart.active {
+  border-color: #d96a86;
+  color: #c13c62;
+  background: #fff3f7;
+}
+
+.favorite-heart.active .heart-icon {
+  color: #c13c62;
+  animation: favorite-heart-pop 260ms cubic-bezier(0.22, 0.9, 0.32, 1.25);
+}
+
+.favorite-heart.active .heart-icon path {
+  fill: currentColor;
+}
+
+.favorite-heart:active {
+  transform: scale(0.98);
+}
+
+@keyframes favorite-heart-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .favorite-heart,
+  .favorite-heart .heart-icon,
+  .favorite-heart .heart-icon path {
+    transition: none;
+  }
+
+  .favorite-heart:hover,
+  .favorite-heart:active {
+    transform: none;
+  }
+
+  .favorite-heart.active .heart-icon {
+    animation: none;
+  }
+}
+
+.finish-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.finish-divider::before,
+.finish-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(207, 224, 203, 0) 0%, rgba(207, 224, 203, 1) 35%, rgba(207, 224, 203, 1) 100%);
+}
+
+.finish-divider::after {
+  background: linear-gradient(90deg, rgba(207, 224, 203, 1) 0%, rgba(207, 224, 203, 1) 65%, rgba(207, 224, 203, 0) 100%);
+}
+
+.finish-divider span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #a8c5a7;
+  box-shadow: 0 0 0 4px #f7fbf4;
 }
 
 .color-chip {
@@ -501,12 +694,24 @@ textarea:focus {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  padding: 8px 0;
+  padding: 5px 0;
   border-bottom: 1px solid #edf3eb;
 }
 
 .rating-row:last-of-type {
   border-bottom: 0;
+}
+
+.rating-row.invalid > span {
+  color: #a94442;
+  font-weight: 600;
+}
+
+.rating-row.invalid .stars {
+  border: 1px solid #d9534f;
+  border-radius: 8px;
+  padding: 2px 6px;
+  background: #fff6f6;
 }
 
 .stars {
@@ -518,7 +723,7 @@ textarea:focus {
   border: 0;
   background: transparent;
   color: #e0a94b;
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1;
   cursor: pointer;
   padding: 0;
@@ -526,7 +731,7 @@ textarea:focus {
 
 .rating-summary {
   margin-top: auto;
-  padding-top: 14px;
+  padding-top: 10px;
   border-top: 1px solid #e2ece0;
   display: flex;
   align-items: baseline;
@@ -548,7 +753,7 @@ textarea:focus {
 @media (max-width: 860px) {
   .field-grid,
   .finish-top-fields,
-  .final-secondary-grid,
+  .final-main-grid,
   .color-picker,
   .descriptor-layout,
   .brew-params {

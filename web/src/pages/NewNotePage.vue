@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import NoteBasicsStep from '../components/note-form/NoteBasicsStep.vue';
 import NoteBrewStep from '../components/note-form/NoteBrewStep.vue';
@@ -24,15 +24,14 @@ import {
   buildSetupSummary,
   createSkippedBasicsState,
   createSkippedBrewState,
+  countrySuggestions,
+  getOriginRegionOptions,
   getStepValidationError,
+  isKnownCountry,
+  isKnownRegionForCountry,
   readStoredDraftNoteId,
   type OptionalBasicField,
   type OptionalBrewField,
-  cultivarSuggestions,
-  originSuggestions,
-  processingStyleOptions,
-  regionSuggestions,
-  sourceOptions,
   teaTypeOptions,
   waterSourceOptions,
 } from '../services/noteForm';
@@ -53,11 +52,8 @@ if (route.query.fresh === '1' || route.params.noteId) {
 const sessionTitle = ref('');
 const teaName = ref('');
 const teaType = ref('');
-const region = ref('');
-const originDetail = ref('');
-const cultivar = ref('');
-const source = ref('');
-const processingStyle = ref('');
+const country = ref('');
+const originRegion = ref('');
 const harvestSeason = ref('');
 const harvestYear = ref<number | null>(null);
 
@@ -76,6 +72,7 @@ const liquorColor = ref('');
 const mouthfeel = ref('');
 const energyEffect = ref('');
 const noteColor = ref('');
+const isFavorite = ref(false);
 const freeText = ref('');
 
 const setups = ref<TeaSetup[]>([]);
@@ -90,13 +87,11 @@ const basicFields = {
   sessionTitle,
   teaName,
   teaType,
-  region,
-  originDetail,
-  cultivar,
-  source,
-  processingStyle,
+  country,
+  originRegion,
   harvestSeason,
   harvestYear,
+  notes: freeText,
 };
 
 const brewFields = {
@@ -119,11 +114,13 @@ const finishFields = {
   energyEffect,
   ratings,
   noteColor,
+  isFavorite,
   freeText,
 };
 
 const showExtraBasics = ref(false);
 const showExtraBrew = ref(false);
+const showStepValidation = ref(false);
 const skippedBasics = ref<Record<OptionalBasicField, boolean>>(createSkippedBasicsState());
 const skippedBrew = ref<Record<OptionalBrewField, boolean>>(createSkippedBrewState());
 
@@ -211,8 +208,67 @@ const descriptorBreadcrumb = computed(() => {
 });
 
 const selectedDescriptors = computed(() => selectedDescriptorIds.value.map((id) => describeDescriptorPath(id)));
-const basicsExpanded = computed(() => showExtraBasics.value);
-const brewExpanded = computed(() => showExtraBrew.value);
+const originRegionSuggestions = computed(() => getOriginRegionOptions(country.value));
+const basicInvalidFields = computed(() => {
+  if (!showStepValidation.value || step.value !== 1) {
+    return { sessionTitle: false, teaName: false, teaType: false };
+  }
+  return {
+    sessionTitle: !sessionTitle.value.trim(),
+    teaName: !teaName.value.trim(),
+    teaType: !teaType.value.trim(),
+  };
+});
+const basicOptionalInvalidFields = computed(() => {
+  if (!showStepValidation.value || step.value !== 1 || !showExtraBasics.value) {
+    return {
+      country: false,
+      originRegion: false,
+      harvestSeason: false,
+      harvestYear: false,
+      notes: false,
+    };
+  }
+  return {
+    country: !skippedBasics.value.country && !isKnownCountry(country.value),
+    originRegion: !skippedBasics.value.originRegion && !isKnownRegionForCountry(country.value, originRegion.value),
+    harvestSeason: !skippedBasics.value.harvestSeason && !harvestSeason.value.trim(),
+    harvestYear: !skippedBasics.value.harvestYear && harvestYear.value === null,
+    notes: !skippedBasics.value.notes && !freeText.value.trim(),
+  };
+});
+const brewInvalidFields = computed(() => {
+  if (!showStepValidation.value || step.value !== 2) {
+    return { leafGrams: false, waterTemp: false, timeValue: false };
+  }
+  return {
+    leafGrams: leafGrams.value === null || leafGrams.value <= 0,
+    waterTemp: waterTemp.value === null || waterTemp.value <= 0,
+    timeValue: timeValue.value === null || timeValue.value < timeMin.value,
+  };
+});
+const brewOptionalInvalidFields = computed(() => {
+  if (!showStepValidation.value || step.value !== 2 || !showExtraBrew.value) {
+    return { waterSource: false, rinseCount: false, infusionsCount: false, brewingMethod: false };
+  }
+  return {
+    waterSource: !skippedBrew.value.waterSource && !waterSource.value.trim(),
+    rinseCount: !skippedBrew.value.rinseCount && rinseCount.value === null,
+    infusionsCount: false,
+    brewingMethod: !skippedBrew.value.brewingMethod && !brewingMethod.value.trim(),
+  };
+});
+const finishInvalidFields = computed(() => {
+  if (!showStepValidation.value || step.value !== 4) {
+    return { ratings: false, liquorColor: false, mouthfeel: false, energyEffect: false };
+  }
+  return {
+    ratings: !areRatingsComplete.value,
+    liquorColor: !liquorColor.value.trim(),
+    mouthfeel: !mouthfeel.value.trim(),
+    energyEffect: !energyEffect.value.trim(),
+  };
+});
 const skippedBasicFields = computed(() =>
   Object.entries(skippedBasics.value)
     .filter(([, skipped]) => skipped)
@@ -231,7 +287,7 @@ const isEditing = computed(() => Boolean(editingNoteId.value));
 
 const stepIntroCopy = computed(() => {
   if (step.value === 1) {
-    return 'Заполни то, что знаешь наверняка: название, тип и регион. Более тонкие детали можно раскрыть ниже, если они у тебя есть.';
+    return 'Заполни то, что знаешь наверняка: название и тип. Остальные детали можно добавить по желанию.';
   }
   if (step.value === 2) {
     return 'Для заметки достаточно базовых параметров. Если хочешь сохранить точнее, ниже есть опциональные поля про воду, промывку и число проливов.';
@@ -266,11 +322,8 @@ function applyNoteRecord(note: NoteRecord) {
   sessionTitle.value = note.sessionTitle ?? '';
   teaName.value = note.teaName ?? '';
   teaType.value = note.teaType ?? '';
-  region.value = note.region ?? '';
-  originDetail.value = note.originDetail ?? '';
-  cultivar.value = note.cultivar ?? '';
-  source.value = note.source ?? '';
-  processingStyle.value = note.processingStyle ?? '';
+  country.value = note.region ?? '';
+  originRegion.value = '';
   harvestSeason.value = note.harvestSeason ?? '';
   harvestYear.value = note.harvestYear ?? null;
   brewingMode.value = note.brewingMode ?? 'gongfu';
@@ -287,6 +340,7 @@ function applyNoteRecord(note: NoteRecord) {
   mouthfeel.value = note.mouthfeel ?? '';
   energyEffect.value = note.energyEffect ?? '';
   noteColor.value = note.noteColor ?? '';
+  isFavorite.value = note.isFavorite ?? false;
   freeText.value = note.freeText ?? '';
   selectedDescriptorIds.value = [...(note.descriptors ?? [])];
   ratings.value = {
@@ -301,7 +355,7 @@ function applyNoteRecord(note: NoteRecord) {
   for (const key of Object.keys(skippedBrew.value) as OptionalBrewField[]) {
     skippedBrew.value[key] = Boolean(note.skippedFields?.includes(key));
   }
-  showExtraBasics.value = skippedBasicFields.value.length > 0 || Boolean(originDetail.value || cultivar.value || source.value || processingStyle.value || harvestSeason.value || harvestYear.value);
+  showExtraBasics.value = skippedBasicFields.value.length > 0 || Boolean(country.value || originRegion.value || harvestSeason.value || harvestYear.value || freeText.value);
   showExtraBrew.value = skippedBrewFields.value.length > 0 || Boolean(waterSource.value || rinseCount.value !== null || infusionsCount.value !== null || brewingMethod.value);
 }
 
@@ -311,11 +365,11 @@ function buildPayload(): NoteRecord {
     sessionTitle: sessionTitle.value,
     teaName: teaName.value,
     teaType: teaType.value,
-    region: region.value,
-    originDetail: originDetail.value,
-    cultivar: cultivar.value,
-    source: source.value,
-    processingStyle: processingStyle.value,
+    region: originRegion.value || country.value,
+    originDetail: '',
+    cultivar: '',
+    source: '',
+    processingStyle: '',
     harvestSeason: harvestSeason.value,
     harvestYear: harvestYear.value,
     skippedFields: skippedFields.value,
@@ -336,6 +390,7 @@ function buildPayload(): NoteRecord {
     mouthfeel: mouthfeel.value,
     energyEffect: energyEffect.value,
     noteColor: noteColor.value,
+    isFavorite: isFavorite.value,
     freeText: freeText.value,
     ratings: { ...ratings.value },
     updatedAt: new Date().toISOString(),
@@ -345,15 +400,44 @@ function buildPayload(): NoteRecord {
 function validateStep(targetStep = step.value) {
   return getStepValidationError({
     targetStep,
+    sessionTitle: sessionTitle.value,
     teaName: teaName.value,
     teaType: teaType.value,
-    region: region.value,
+    country: country.value,
+    originRegion: originRegion.value,
     leafGrams: leafGrams.value,
     waterTemp: waterTemp.value,
     timeValue: timeValue.value,
     timeMin: timeMin.value,
     areRatingsComplete: areRatingsComplete.value,
+    liquorColor: liquorColor.value,
+    mouthfeel: mouthfeel.value,
+    energyEffect: energyEffect.value,
   });
+}
+
+function getOptionalStepValidationError(targetStep = step.value) {
+  if (targetStep === 1 && showExtraBasics.value) {
+    const hasUnfilledOptionalBasics =
+      (!skippedBasics.value.country && !isKnownCountry(country.value)) ||
+      (!skippedBasics.value.originRegion && !isKnownRegionForCountry(country.value, originRegion.value)) ||
+      (!skippedBasics.value.harvestSeason && !harvestSeason.value.trim()) ||
+      (!skippedBasics.value.harvestYear && harvestYear.value === null) ||
+      (!skippedBasics.value.notes && !freeText.value.trim());
+    if (hasUnfilledOptionalBasics) {
+      return 'Заполни раскрытые опциональные поля или отметь их как «Не указываю».';
+    }
+  }
+  if (targetStep === 2 && showExtraBrew.value) {
+    const hasUnfilledOptionalBrew =
+      (!skippedBrew.value.waterSource && !waterSource.value.trim()) ||
+      (!skippedBrew.value.rinseCount && rinseCount.value === null) ||
+      (!skippedBrew.value.brewingMethod && !brewingMethod.value.trim());
+    if (hasUnfilledOptionalBrew) {
+      return 'Заполни раскрытые опциональные поля или отметь их как «Не указываю».';
+    }
+  }
+  return '';
 }
 
 onMounted(async () => {
@@ -377,17 +461,32 @@ onMounted(async () => {
   }
 });
 
+watch(country, (value) => {
+  const options = getOriginRegionOptions(value);
+  if (!options.includes(originRegion.value)) {
+    originRegion.value = '';
+  }
+});
+
 function nextStep() {
+  showStepValidation.value = true;
   const error = validateStep(step.value);
   if (error) {
     stepError.value = error;
     return;
   }
+  const optionalError = getOptionalStepValidationError(step.value);
+  if (optionalError) {
+    stepError.value = optionalError;
+    return;
+  }
+  showStepValidation.value = false;
   stepError.value = '';
   if (step.value < 4) step.value += 1;
 }
 
 function prevStep() {
+  showStepValidation.value = false;
   if (step.value > 1) step.value -= 1;
 }
 
@@ -396,16 +495,24 @@ function setRating(key: keyof typeof ratings.value, value: number) {
 }
 
 function clearOptionalBasicValue(field: OptionalBasicField) {
-  if (field === 'originDetail') originDetail.value = '';
-  if (field === 'cultivar') cultivar.value = '';
-  if (field === 'source') source.value = '';
+  if (field === 'country') {
+    country.value = '';
+    originRegion.value = '';
+  }
+  if (field === 'originRegion') originRegion.value = '';
   if (field === 'harvestSeason') harvestSeason.value = '';
   if (field === 'harvestYear') harvestYear.value = null;
-  if (field === 'processingStyle') processingStyle.value = '';
+  if (field === 'notes') freeText.value = '';
 }
 
 function setBasicFieldSkipped(field: OptionalBasicField, skipped: boolean) {
   skippedBasics.value[field] = skipped;
+  if (field === 'country' && skipped) {
+    skippedBasics.value.originRegion = true;
+  }
+  if (field === 'country' && !skipped) {
+    skippedBasics.value.originRegion = false;
+  }
   if (skipped) clearOptionalBasicValue(field);
 }
 
@@ -477,15 +584,18 @@ function saveDraft() {
   const payload = saveDraftRecord(buildPayload());
   draftNoteId.value = payload.id;
   formNotice.value = 'Черновик сохранён локально. Он не попадёт в журнал, пока ты не завершишь заметку.';
+  showStepValidation.value = false;
   stepError.value = '';
 }
 
 function finish() {
   const error = validateStep(4);
   if (error) {
+    showStepValidation.value = true;
     stepError.value = error;
     return;
   }
+  showStepValidation.value = false;
   const saved = publishNote(buildPayload());
   discardDraft(saved.id);
   stepError.value = '';
@@ -521,32 +631,31 @@ function goBack() {
     <section class="card">
       <NoteBasicsStep
         v-if="step === 1"
+        v-model:basicsExpanded="showExtraBasics"
         :step-intro-copy="stepIntroCopy"
         :fields="basicFields"
-        :basics-expanded="basicsExpanded"
         :skipped-basics="skippedBasics"
+        :invalid-fields="basicInvalidFields"
+        :optional-invalid-fields="basicOptionalInvalidFields"
         :tea-type-options="teaTypeOptions"
-        :region-suggestions="regionSuggestions"
-        :origin-suggestions="originSuggestions"
-        :cultivar-suggestions="cultivarSuggestions"
-        :source-options="sourceOptions"
-        :processing-style-options="processingStyleOptions"
-        :toggle-extra-basics="() => (showExtraBasics = !showExtraBasics)"
+        :country-suggestions="countrySuggestions"
+        :origin-region-suggestions="originRegionSuggestions"
         :set-basic-field-skipped="setBasicFieldSkipped"
       />
 
       <NoteBrewStep
         v-else-if="step === 2"
+        v-model:brewExpanded="showExtraBrew"
         :step-intro-copy="stepIntroCopy"
         :fields="brewFields"
         :time-label="timeLabel"
         :time-unit="timeUnit"
         :time-min="timeMin"
         :time-max="timeMax"
-        :brew-expanded="brewExpanded"
         :skipped-brew="skippedBrew"
+        :invalid-fields="brewInvalidFields"
+        :optional-invalid-fields="brewOptionalInvalidFields"
         :water-source-options="waterSourceOptions"
-        :toggle-extra-brew="() => (showExtraBrew = !showExtraBrew)"
         :set-brew-field-skipped="setBrewFieldSkipped"
       />
 
@@ -571,6 +680,7 @@ function goBack() {
         v-else
         :step-intro-copy="stepIntroCopy"
         :fields="finishFields"
+        :invalid-fields="finishInvalidFields"
         :ratings-average="ratingsAverage"
         :note-color-options="noteColorOptions"
         :set-rating="setRating"
@@ -663,499 +773,6 @@ function goBack() {
   padding: 24px;
 }
 
-.step-shell {
-  display: grid;
-  gap: 18px;
-}
-
-.final-step-shell {
-  gap: 18px;
-}
-
-.step-intro {
-  padding: 18px 20px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #f7fbf5 0%, #edf6e8 100%);
-  border: 1px solid #d8e7d3;
-}
-
-.step-intro h2 {
-  margin: 0 0 6px;
-  font-size: 22px;
-}
-
-.step-intro p {
-  margin: 0;
-  color: #537057;
-  line-height: 1.5;
-}
-
-.field-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.field {
-  display: grid;
-  gap: 6px;
-  color: #345139;
-  font-size: 14px;
-  padding: 14px;
-  border-radius: 14px;
-  border: 1px solid #dbe7d8;
-  background: #fbfdf9;
-}
-
-.field-span-2 {
-  grid-column: span 2;
-}
-
-.field-span-all {
-  grid-column: 1 / -1;
-}
-
-.field-title {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #628067;
-  font-weight: 700;
-}
-
-.field-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.field-skip-btn {
-  border: 1px solid #d4e3d0;
-  background: #fff;
-  color: #58725c;
-  border-radius: 999px;
-  padding: 4px 9px;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.field-skip-btn.active {
-  background: #e9f5e5;
-  border-color: #93bf97;
-  color: #265130;
-}
-
-.field-note {
-  margin: -2px 0 0;
-  color: #6a846e;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.field-skipped {
-  background: #f7faf5;
-  border-style: dashed;
-}
-
-.field-skipped-state {
-  min-height: 42px;
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  border-radius: 10px;
-  background: #f4f7f2;
-  color: #708673;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-input,
-select,
-textarea {
-  border: 1px solid #cedec9;
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 14px;
-  background: #fff;
-  transition: border-color 0.16s ease, box-shadow 0.16s ease;
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-  outline: none;
-  border-color: #7fb286;
-  box-shadow: 0 0 0 3px rgba(94, 156, 104, 0.12);
-}
-
-.optional-block {
-  border: 1px dashed #d9e6d5;
-  border-radius: 16px;
-  padding: 14px;
-  background: #fbfdf9;
-}
-
-.optional-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.optional-head h3 {
-  margin: 0 0 4px;
-  font-size: 16px;
-}
-
-.optional-copy {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.45;
-  color: #617b65;
-}
-
-.optional-grid {
-  padding-top: 4px;
-}
-
-.session-basics-grid {
-  align-items: start;
-}
-
-.metric-section {
-  border: 1px solid #dbe7d8;
-  border-radius: 16px;
-  padding: 16px;
-  background: linear-gradient(180deg, #fcfefb 0%, #f7fbf5 100%);
-}
-
-.metric-section-head {
-  margin-bottom: 12px;
-}
-
-.metric-section-head h3 {
-  margin: 0 0 4px;
-  font-size: 16px;
-  color: #284e30;
-}
-
-.metric-section-head p {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.45;
-  color: #627c66;
-}
-
-.descriptor-layout {
-  display: grid;
-  grid-template-columns: minmax(460px, 700px) 1fr;
-  gap: 20px;
-  align-items: start;
-}
-
-.descriptor-panel {
-  display: grid;
-  gap: 12px;
-}
-
-.descriptor-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 32px;
-}
-
-.crumbs {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  min-height: 28px;
-}
-
-.crumb {
-  padding: 4px 0;
-  color: #6f8773;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.crumb.active {
-  color: #244e2e;
-}
-
-.crumb-separator {
-  color: #9db39f;
-  font-size: 14px;
-  line-height: 1;
-}
-
-.selected {
-  border: 1px solid #dbe7d8;
-  border-radius: 12px;
-  padding: 14px;
-  background: #fbfdf9;
-}
-
-.selected h3 {
-  margin: 0;
-}
-
-.selected-head {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.selected-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-}
-
-.selected-count {
-  min-width: 54px;
-  text-align: center;
-  border-radius: 999px;
-  padding: 6px 10px;
-  background: #e8f3e5;
-  color: #2b5b34;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.selected-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.descriptor-tag {
-  border: 1px solid #cee0ca;
-  background: #f4faf2;
-  border-radius: 999px;
-  padding: 8px 10px 8px 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  color: #285231;
-  font-size: 13px;
-}
-
-.descriptor-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex: 0 0 10px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.75), 0 0 0 1px rgba(87, 112, 92, 0.12);
-}
-
-.tag-remove {
-  font-size: 16px;
-  line-height: 1;
-  color: #75917a;
-}
-
-.descriptor-notes {
-  margin-top: 16px;
-  border-top: 1px solid #e2ece0;
-  padding-top: 14px;
-}
-
-.descriptor-notes h4 {
-  margin: 0 0 8px;
-  font-size: 14px;
-}
-
-.descriptor-notes ul {
-  margin: 0;
-  padding-left: 18px;
-  color: #59735d;
-  line-height: 1.6;
-}
-
-.hint {
-  margin: 0;
-  color: #668169;
-}
-
-.setup-hint {
-  margin: -4px 0 2px;
-  color: #5f7962;
-  font-size: 13px;
-}
-
-.brew-params {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  padding-top: 4px;
-}
-
-.brew-params-primary {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.param {
-  border: 1px solid #dbe7d8;
-  background: #fbfdf8;
-  border-radius: 12px;
-  padding: 10px;
-  display: grid;
-  gap: 6px;
-}
-
-.param-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: #3d5e42;
-}
-
-.param-input {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.param-input input {
-  width: 100%;
-  border: 1px solid #cedec9;
-  border-radius: 10px;
-  padding: 8px 10px;
-  font-size: 14px;
-}
-
-.param-inline {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.param-inline input {
-  width: 100%;
-}
-
-.unit {
-  color: #5c775f;
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.final-secondary-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-  margin-top: 0;
-}
-
-.finish-top-card {
-  border: 1px solid #dce8d8;
-  border-radius: 12px;
-  padding: 12px;
-  background: #fbfdf9;
-}
-
-.finish-top-fields {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  align-content: start;
-}
-
-.final-section-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.final-section-head h3 {
-  margin: 0 0 4px;
-}
-
-.final-section-head p {
-  margin: 0;
-  color: #617b65;
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.notes-panel {
-  border: 1px solid #dce8d8;
-  border-radius: 12px;
-  padding: 12px;
-  background: #fbfdf9;
-}
-
-.note-color-panel {
-  align-content: start;
-}
-
-.color-picker {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.color-chip {
-  border: 1px solid #d7e5d2;
-  border-radius: 12px;
-  background: #fff;
-  padding: 10px 12px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  text-align: left;
-  color: #35513a;
-}
-
-.color-chip.active {
-  border-color: #2f7b3d;
-  box-shadow: inset 0 0 0 1px #2f7b3d;
-}
-
-.color-chip-swatch {
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  flex: 0 0 18px;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.65), 0 0 0 1px rgba(73,101,79,0.14);
-}
-
-.color-chip.empty .color-chip-swatch {
-  background: linear-gradient(135deg, #eef4ea 0%, #d9e6d5 100%);
-}
-
-.color-chip-label {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.notes-field {
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-
-@media (max-width: 860px) {
-  .brew-params {
-    grid-template-columns: 1fr;
-  }
-}
-
 .footer {
   max-width: 1080px;
   margin: 16px auto 0;
@@ -1192,122 +809,9 @@ textarea:focus {
   color: #1f4d28;
 }
 
-.mini-btn {
-  border: 1px solid #cfe0cb;
-  background: #f5faf3;
-  color: #33553b;
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.mini-btn.ghost {
-  background: #fff;
-}
-
-.ratings {
-  border: 1px solid #dce8d8;
-  border-radius: 12px;
-  padding: 14px;
-  background: #fbfdf9;
-  display: flex;
-  flex-direction: column;
-}
-
-.ratings h3 {
-  margin: 0 0 10px;
-}
-
-.rating-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid #edf3eb;
-}
-
-.rating-row:last-of-type {
-  border-bottom: 0;
-}
-
-.stars {
-  display: flex;
-  gap: 4px;
-}
-
-.star {
-  border: 0;
-  background: transparent;
-  color: #e0a94b;
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 0;
-}
-
-.rating-summary {
-  margin-top: auto;
-  padding-top: 14px;
-  border-top: 1px solid #e2ece0;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.rating-summary-label {
-  color: #5f7962;
-  font-size: 13px;
-}
-
-.rating-summary-value {
-  color: #244e2e;
-  font-size: 22px;
-  line-height: 1;
-}
-
-.finish-field-compact {
-  gap: 8px;
-  padding: 12px;
-}
-
-.finish-field-compact select {
-  min-height: 42px;
-}
-
 @media (max-width: 860px) {
-  .field-grid,
-  .finish-top-fields,
-  .final-secondary-grid,
-  .color-picker,
-  .descriptor-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .field-span-2 {
-    grid-column: auto;
-  }
-
-  .brew-params {
-    grid-template-columns: 1fr;
-  }
-
-  .descriptor-toolbar {
-    align-items: flex-start;
-  }
-
-  .selected-meta {
-    align-items: flex-start;
-  }
-
-  .optional-head {
-    flex-direction: column;
-  }
-
-  .field-head {
-    flex-direction: column;
+  .page {
+    padding: 16px;
   }
 }
 </style>

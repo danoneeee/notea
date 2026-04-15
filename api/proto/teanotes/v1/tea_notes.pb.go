@@ -1106,7 +1106,7 @@ type TeaNote struct {
 	SessionTitle    *string                `protobuf:"bytes,2,opt,name=session_title,json=sessionTitle,proto3,oneof" json:"session_title,omitempty"`
 	TeaName         string                 `protobuf:"bytes,3,opt,name=tea_name,json=teaName,proto3" json:"tea_name,omitempty"`
 	TeaType         string                 `protobuf:"bytes,4,opt,name=tea_type,json=teaType,proto3" json:"tea_type,omitempty"`
-	Region          string                 `protobuf:"bytes,5,opt,name=region,proto3" json:"region,omitempty"`
+	Region          string                 `protobuf:"bytes,5,opt,name=region,proto3" json:"region,omitempty"` // провинция / регион внутри страны
 	OriginDetail    *string                `protobuf:"bytes,6,opt,name=origin_detail,json=originDetail,proto3,oneof" json:"origin_detail,omitempty"`
 	Cultivar        *string                `protobuf:"bytes,7,opt,name=cultivar,proto3,oneof" json:"cultivar,omitempty"`
 	Source          *string                `protobuf:"bytes,8,opt,name=source,proto3,oneof" json:"source,omitempty"`
@@ -1134,6 +1134,8 @@ type TeaNote struct {
 	Ratings         *NoteRatingsMsg        `protobuf:"bytes,30,opt,name=ratings,proto3" json:"ratings,omitempty"`
 	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,31,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	NoteColor       *string                `protobuf:"bytes,32,opt,name=note_color,json=noteColor,proto3,oneof" json:"note_color,omitempty"`
+	Country         string                 `protobuf:"bytes,33,opt,name=country,proto3" json:"country,omitempty"`
+	SessionAt       *timestamppb.Timestamp `protobuf:"bytes,34,opt,name=session_at,json=sessionAt,proto3" json:"session_at,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -1390,6 +1392,20 @@ func (x *TeaNote) GetNoteColor() string {
 		return *x.NoteColor
 	}
 	return ""
+}
+
+func (x *TeaNote) GetCountry() string {
+	if x != nil {
+		return x.Country
+	}
+	return ""
+}
+
+func (x *TeaNote) GetSessionAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.SessionAt
+	}
+	return nil
 }
 
 type UpsertTeaNoteRequest struct {
@@ -1821,7 +1837,7 @@ const file_teanotes_v1_tea_notes_proto_rawDesc = "" +
 	"\n" +
 	"aftertaste\x18\x03 \x01(\x05R\n" +
 	"aftertaste\x12\x18\n" +
-	"\abalance\x18\x04 \x01(\x05R\abalance\"\xe7\v\n" +
+	"\abalance\x18\x04 \x01(\x05R\abalance\"\xbc\f\n" +
 	"\aTeaNote\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\rsession_title\x18\x02 \x01(\tH\x00R\fsessionTitle\x88\x01\x01\x12\x19\n" +
@@ -1862,7 +1878,10 @@ const file_teanotes_v1_tea_notes_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x1f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\"\n" +
 	"\n" +
-	"note_color\x18  \x01(\tH\x12R\tnoteColor\x88\x01\x01B\x10\n" +
+	"note_color\x18  \x01(\tH\x12R\tnoteColor\x88\x01\x01\x12\x18\n" +
+	"\acountry\x18! \x01(\tR\acountry\x129\n" +
+	"\n" +
+	"session_at\x18\" \x01(\v2\x1a.google.protobuf.TimestampR\tsessionAtB\x10\n" +
 	"\x0e_session_titleB\x10\n" +
 	"\x0e_origin_detailB\v\n" +
 	"\t_cultivarB\t\n" +
@@ -1981,33 +2000,34 @@ var file_teanotes_v1_tea_notes_proto_depIdxs = []int32{
 	11, // 15: teanotes.v1.ListSessionsResponse.sessions:type_name -> teanotes.v1.Session
 	18, // 16: teanotes.v1.TeaNote.ratings:type_name -> teanotes.v1.NoteRatingsMsg
 	28, // 17: teanotes.v1.TeaNote.updated_at:type_name -> google.protobuf.Timestamp
-	19, // 18: teanotes.v1.UpsertTeaNoteRequest.note:type_name -> teanotes.v1.TeaNote
-	19, // 19: teanotes.v1.UpsertTeaNoteResponse.note:type_name -> teanotes.v1.TeaNote
-	19, // 20: teanotes.v1.GetTeaNoteResponse.note:type_name -> teanotes.v1.TeaNote
-	19, // 21: teanotes.v1.ListTeaNotesResponse.notes:type_name -> teanotes.v1.TeaNote
-	12, // 22: teanotes.v1.TeaNotesService.CreateSession:input_type -> teanotes.v1.CreateSessionRequest
-	14, // 23: teanotes.v1.TeaNotesService.GetSession:input_type -> teanotes.v1.GetSessionRequest
-	16, // 24: teanotes.v1.TeaNotesService.ListSessions:input_type -> teanotes.v1.ListSessionsRequest
-	5,  // 25: teanotes.v1.TeaNotesService.ListTeas:input_type -> teanotes.v1.ListTeasRequest
-	7,  // 26: teanotes.v1.TeaNotesService.ListDescriptorCategories:input_type -> teanotes.v1.ListDescriptorCategoriesRequest
-	20, // 27: teanotes.v1.TeaNotesService.UpsertTeaNote:input_type -> teanotes.v1.UpsertTeaNoteRequest
-	22, // 28: teanotes.v1.TeaNotesService.GetTeaNote:input_type -> teanotes.v1.GetTeaNoteRequest
-	24, // 29: teanotes.v1.TeaNotesService.ListTeaNotes:input_type -> teanotes.v1.ListTeaNotesRequest
-	26, // 30: teanotes.v1.TeaNotesService.DeleteTeaNote:input_type -> teanotes.v1.DeleteTeaNoteRequest
-	13, // 31: teanotes.v1.TeaNotesService.CreateSession:output_type -> teanotes.v1.CreateSessionResponse
-	15, // 32: teanotes.v1.TeaNotesService.GetSession:output_type -> teanotes.v1.GetSessionResponse
-	17, // 33: teanotes.v1.TeaNotesService.ListSessions:output_type -> teanotes.v1.ListSessionsResponse
-	6,  // 34: teanotes.v1.TeaNotesService.ListTeas:output_type -> teanotes.v1.ListTeasResponse
-	8,  // 35: teanotes.v1.TeaNotesService.ListDescriptorCategories:output_type -> teanotes.v1.ListDescriptorCategoriesResponse
-	21, // 36: teanotes.v1.TeaNotesService.UpsertTeaNote:output_type -> teanotes.v1.UpsertTeaNoteResponse
-	23, // 37: teanotes.v1.TeaNotesService.GetTeaNote:output_type -> teanotes.v1.GetTeaNoteResponse
-	25, // 38: teanotes.v1.TeaNotesService.ListTeaNotes:output_type -> teanotes.v1.ListTeaNotesResponse
-	27, // 39: teanotes.v1.TeaNotesService.DeleteTeaNote:output_type -> teanotes.v1.DeleteTeaNoteResponse
-	31, // [31:40] is the sub-list for method output_type
-	22, // [22:31] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	28, // 18: teanotes.v1.TeaNote.session_at:type_name -> google.protobuf.Timestamp
+	19, // 19: teanotes.v1.UpsertTeaNoteRequest.note:type_name -> teanotes.v1.TeaNote
+	19, // 20: teanotes.v1.UpsertTeaNoteResponse.note:type_name -> teanotes.v1.TeaNote
+	19, // 21: teanotes.v1.GetTeaNoteResponse.note:type_name -> teanotes.v1.TeaNote
+	19, // 22: teanotes.v1.ListTeaNotesResponse.notes:type_name -> teanotes.v1.TeaNote
+	12, // 23: teanotes.v1.TeaNotesService.CreateSession:input_type -> teanotes.v1.CreateSessionRequest
+	14, // 24: teanotes.v1.TeaNotesService.GetSession:input_type -> teanotes.v1.GetSessionRequest
+	16, // 25: teanotes.v1.TeaNotesService.ListSessions:input_type -> teanotes.v1.ListSessionsRequest
+	5,  // 26: teanotes.v1.TeaNotesService.ListTeas:input_type -> teanotes.v1.ListTeasRequest
+	7,  // 27: teanotes.v1.TeaNotesService.ListDescriptorCategories:input_type -> teanotes.v1.ListDescriptorCategoriesRequest
+	20, // 28: teanotes.v1.TeaNotesService.UpsertTeaNote:input_type -> teanotes.v1.UpsertTeaNoteRequest
+	22, // 29: teanotes.v1.TeaNotesService.GetTeaNote:input_type -> teanotes.v1.GetTeaNoteRequest
+	24, // 30: teanotes.v1.TeaNotesService.ListTeaNotes:input_type -> teanotes.v1.ListTeaNotesRequest
+	26, // 31: teanotes.v1.TeaNotesService.DeleteTeaNote:input_type -> teanotes.v1.DeleteTeaNoteRequest
+	13, // 32: teanotes.v1.TeaNotesService.CreateSession:output_type -> teanotes.v1.CreateSessionResponse
+	15, // 33: teanotes.v1.TeaNotesService.GetSession:output_type -> teanotes.v1.GetSessionResponse
+	17, // 34: teanotes.v1.TeaNotesService.ListSessions:output_type -> teanotes.v1.ListSessionsResponse
+	6,  // 35: teanotes.v1.TeaNotesService.ListTeas:output_type -> teanotes.v1.ListTeasResponse
+	8,  // 36: teanotes.v1.TeaNotesService.ListDescriptorCategories:output_type -> teanotes.v1.ListDescriptorCategoriesResponse
+	21, // 37: teanotes.v1.TeaNotesService.UpsertTeaNote:output_type -> teanotes.v1.UpsertTeaNoteResponse
+	23, // 38: teanotes.v1.TeaNotesService.GetTeaNote:output_type -> teanotes.v1.GetTeaNoteResponse
+	25, // 39: teanotes.v1.TeaNotesService.ListTeaNotes:output_type -> teanotes.v1.ListTeaNotesResponse
+	27, // 40: teanotes.v1.TeaNotesService.DeleteTeaNote:output_type -> teanotes.v1.DeleteTeaNoteResponse
+	32, // [32:41] is the sub-list for method output_type
+	23, // [23:32] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_teanotes_v1_tea_notes_proto_init() }

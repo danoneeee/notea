@@ -53,6 +53,7 @@ export type NoteRecord = {
   /** Стабильный id (UUID); нужен для синхронизации с сервером. */
   id: string;
   noteColor?: string;
+  isFavorite?: boolean;
   sessionTitle?: string;
   teaName: string;
   teaType: string;

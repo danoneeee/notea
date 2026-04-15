@@ -931,6 +931,8 @@ export class TeaNote extends Message<TeaNote> {
   teaType = "";
 
   /**
+   * провинция / регион внутри страны
+   *
    * @generated from field: string region = 5;
    */
   region = "";
@@ -1070,6 +1072,16 @@ export class TeaNote extends Message<TeaNote> {
    */
   noteColor?: string;
 
+  /**
+   * @generated from field: string country = 33;
+   */
+  country = "";
+
+  /**
+   * @generated from field: google.protobuf.Timestamp session_at = 34;
+   */
+  sessionAt?: Timestamp;
+
   constructor(data?: PartialMessage<TeaNote>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1110,6 +1122,8 @@ export class TeaNote extends Message<TeaNote> {
     { no: 30, name: "ratings", kind: "message", T: NoteRatingsMsg },
     { no: 31, name: "updated_at", kind: "message", T: Timestamp },
     { no: 32, name: "note_color", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 33, name: "country", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 34, name: "session_at", kind: "message", T: Timestamp },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TeaNote {

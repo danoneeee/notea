@@ -22,12 +22,22 @@ defineProps<{
   timeUnit: string;
   timeMin: number;
   timeMax: number;
-  brewExpanded: boolean;
-  skippedBrew: Ref<Record<OptionalBrewField, boolean>>;
+  skippedBrew: Record<OptionalBrewField, boolean>;
+  invalidFields: {
+    leafGrams: boolean;
+    waterTemp: boolean;
+    timeValue: boolean;
+  };
+  optionalInvalidFields: Record<OptionalBrewField, boolean>;
   waterSourceOptions: string[];
-  toggleExtraBrew: () => void;
   setBrewFieldSkipped: (field: OptionalBrewField, skipped: boolean) => void;
 }>();
+
+const brewExpanded = defineModel<boolean>('brewExpanded', { default: false });
+
+function toggleOptionalBrewSection() {
+  brewExpanded.value = !brewExpanded.value;
+}
 </script>
 
 <template>
@@ -62,11 +72,10 @@ defineProps<{
     <section class="metric-section">
       <div class="metric-section-head">
         <h3>Главные параметры</h3>
-        <p>Самое важное для повторения удачной сессии: лист, вода, температура и время.</p>
       </div>
 
       <div class="brew-params brew-params-primary">
-        <div class="param">
+        <div class="param" :class="{ 'param-invalid': invalidFields.leafGrams }">
           <span class="param-label">Лист</span>
           <div class="param-input">
             <input v-model.number="fields.leafGrams.value" type="number" min="0" step="0.1" placeholder="7" />
@@ -80,14 +89,14 @@ defineProps<{
             <span class="unit">мл</span>
           </div>
         </div>
-        <div class="param">
+        <div class="param" :class="{ 'param-invalid': invalidFields.waterTemp }">
           <span class="param-label">Температура воды</span>
           <div class="param-input">
             <input v-model.number="fields.waterTemp.value" type="number" min="0" max="100" step="1" placeholder="95" />
             <span class="unit">°C</span>
           </div>
         </div>
-        <div class="param">
+        <div class="param" :class="{ 'param-invalid': invalidFields.timeValue }">
           <span class="param-label">{{ timeLabel }}</span>
           <div class="param-input">
             <input
@@ -108,19 +117,18 @@ defineProps<{
       <div class="optional-head">
         <div>
           <h3>Тонкие параметры сессии</h3>
-          <p class="optional-copy">Для тех случаев, когда хочется зафиксировать воду, промывку и число проливов.</p>
         </div>
-        <button class="mini-btn" type="button" @click="toggleExtraBrew">
+        <button class="mini-btn" type="button" @click="toggleOptionalBrewSection">
           {{ brewExpanded ? 'Скрыть опциональные поля' : 'Показать опциональные поля' }}
         </button>
       </div>
 
       <div v-if="brewExpanded" class="field-grid optional-grid">
-        <div class="field" :class="{ 'field-skipped': skippedBrew.value.waterSource }">
+        <div class="field" :class="{ 'field-skipped': skippedBrew.waterSource, 'field-invalid': optionalInvalidFields.waterSource }">
           <div class="field-head">
             <span class="field-title">Тип воды</span>
             <button
-              v-if="!skippedBrew.value.waterSource"
+              v-if="!skippedBrew.waterSource"
               type="button"
               class="field-skip-btn"
               @click="setBrewFieldSkipped('waterSource', true)"
@@ -131,8 +139,7 @@ defineProps<{
               Заполнить
             </button>
           </div>
-          <template v-if="!skippedBrew.value.waterSource">
-            <p class="field-note">Лучше короткий шаблон, чем длинное пояснение.</p>
+          <template v-if="!skippedBrew.waterSource">
             <select v-model="fields.waterSource.value">
               <option value="">Выбери тип воды</option>
               <option v-for="option in waterSourceOptions" :key="option" :value="option">{{ option }}</option>
@@ -141,11 +148,11 @@ defineProps<{
           <div v-else class="field-skipped-state">Поле пропущено осознанно</div>
         </div>
 
-        <div class="field" :class="{ 'field-skipped': skippedBrew.value.rinseCount }">
+        <div class="field" :class="{ 'field-skipped': skippedBrew.rinseCount, 'field-invalid': optionalInvalidFields.rinseCount }">
           <div class="field-head">
             <span class="field-title">Промывка</span>
             <button
-              v-if="!skippedBrew.value.rinseCount"
+              v-if="!skippedBrew.rinseCount"
               type="button"
               class="field-skip-btn"
               @click="setBrewFieldSkipped('rinseCount', true)"
@@ -156,8 +163,7 @@ defineProps<{
               Заполнить
             </button>
           </div>
-          <template v-if="!skippedBrew.value.rinseCount">
-            <p class="field-note">Укажи, если промывка реально влияет на твой ритуал.</p>
+          <template v-if="!skippedBrew.rinseCount">
             <div class="param-inline">
               <input v-model.number="fields.rinseCount.value" type="number" min="0" max="5" step="1" placeholder="1" />
               <span class="unit">раз</span>
@@ -166,48 +172,11 @@ defineProps<{
           <div v-else class="field-skipped-state">Поле пропущено осознанно</div>
         </div>
 
-        <div class="field" :class="{ 'field-skipped': skippedBrew.value.infusionsCount }">
-          <div class="field-head">
-            <span class="field-title">Итог проливов</span>
-            <button
-              v-if="!skippedBrew.value.infusionsCount"
-              type="button"
-              class="field-skip-btn"
-              @click="setBrewFieldSkipped('infusionsCount', true)"
-            >
-              Не указываю
-            </button>
-            <button
-              v-else
-              type="button"
-              class="field-skip-btn active"
-              @click="setBrewFieldSkipped('infusionsCount', false)"
-            >
-              Заполнить
-            </button>
-          </div>
-          <template v-if="!skippedBrew.value.infusionsCount">
-            <p class="field-note">Полезно, если хочешь сравнивать живучесть разных партий.</p>
-            <div class="param-inline">
-              <input
-                v-model.number="fields.infusionsCount.value"
-                type="number"
-                min="1"
-                max="30"
-                step="1"
-                placeholder="7"
-              />
-              <span class="unit">шт</span>
-            </div>
-          </template>
-          <div v-else class="field-skipped-state">Поле пропущено осознанно</div>
-        </div>
-
-        <div class="field" :class="{ 'field-skipped': skippedBrew.value.brewingMethod }">
+        <div class="field field-span-2" :class="{ 'field-skipped': skippedBrew.brewingMethod, 'field-invalid': optionalInvalidFields.brewingMethod }">
           <div class="field-head">
             <span class="field-title">Комментарии к сессии</span>
             <button
-              v-if="!skippedBrew.value.brewingMethod"
+              v-if="!skippedBrew.brewingMethod"
               type="button"
               class="field-skip-btn"
               @click="setBrewFieldSkipped('brewingMethod', true)"
@@ -223,8 +192,7 @@ defineProps<{
               Заполнить
             </button>
           </div>
-          <template v-if="!skippedBrew.value.brewingMethod">
-            <p class="field-note">Сюда удобно записать посуду, ритм проливов или другие детали процесса.</p>
+          <template v-if="!skippedBrew.brewingMethod">
             <input
               v-model="fields.brewingMethod.value"
               type="text"
