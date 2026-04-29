@@ -51,6 +51,15 @@ service TeaNotesService {
   rpc GetTeaNote(GetTeaNoteRequest) returns (GetTeaNoteResponse);
   rpc ListTeaNotes(ListTeaNotesRequest) returns (ListTeaNotesResponse);
   rpc DeleteTeaNote(DeleteTeaNoteRequest) returns (DeleteTeaNoteResponse);
+
+  // ---- Посуда и сетапы ----
+  rpc ListTeaware(ListTeawareRequest) returns (ListTeawareResponse);
+  rpc UpsertTeaware(UpsertTeawareRequest) returns (UpsertTeawareResponse);
+  rpc ArchiveTeaware(ArchiveTeawareRequest) returns (ArchiveTeawareResponse);
+
+  rpc ListTeaSetups(ListTeaSetupsRequest) returns (ListTeaSetupsResponse);
+  rpc UpsertTeaSetup(UpsertTeaSetupRequest) returns (UpsertTeaSetupResponse);
+  rpc ArchiveTeaSetup(ArchiveTeaSetupRequest) returns (ArchiveTeaSetupResponse);
 }
 
 // ---- Справочник чаёв ----
@@ -150,10 +159,10 @@ message TeaNote {
   string tea_name = 3;
   string tea_type = 4;
   string region = 5;
-  optional string origin_detail = 6;
-  optional string cultivar = 7;
-  optional string source = 8;
-  optional string processing_style = 9;
+  optional string origin_detail = 6; // legacy: больше не заполняется текущей формой
+  optional string cultivar = 7;      // legacy: больше не заполняется текущей формой
+  optional string source = 8;        // legacy: больше не заполняется текущей формой
+  optional string processing_style = 9; // legacy: больше не заполняется текущей формой
   optional string harvest_season = 10;
   optional int32 harvest_year = 11;
   repeated string skipped_fields = 12;
@@ -173,10 +182,16 @@ message TeaNote {
   optional string liquor_color = 26;
   optional string mouthfeel = 27;
   optional string energy_effect = 28;
-  string free_text = 29;
+  string free_text = 29; // legacy: старое единое поле заметок
   NoteRatingsMsg ratings = 30;
   google.protobuf.Timestamp updated_at = 31;
   optional string note_color = 32;
+  // Страна происхождения. На фронте хранится отдельно от region (провинция/регион).
+  optional string country = 33;
+  optional string passport_notes = 34;
+  optional string cup_profile_notes = 35;
+  bool is_favorite = 36;
+  google.protobuf.Timestamp created_at = 37;
 }
 
 message UpsertTeaNoteRequest {
@@ -209,3 +224,83 @@ message DeleteTeaNoteRequest {
 }
 
 message DeleteTeaNoteResponse {}
+
+// ---- Посуда (Teaware) ----
+
+enum TeawareType {
+  TEAWARE_TYPE_UNSPECIFIED = 0;
+  TEAWARE_TYPE_TEAPOT = 1;
+  TEAWARE_TYPE_GAIWAN = 2;
+  TEAWARE_TYPE_CUP = 3;
+  TEAWARE_TYPE_PITCHER = 4;
+  TEAWARE_TYPE_AROMA_CUP = 5;
+  TEAWARE_TYPE_THERMOS = 6;
+  TEAWARE_TYPE_OTHER = 7;
+}
+
+message Teaware {
+  string id = 1;
+  string name = 2;
+  TeawareType type = 3;
+  string color_hex = 4;
+  bool archived = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  optional google.protobuf.Timestamp archived_at = 8;
+}
+
+message ListTeawareRequest {
+  bool include_archived = 1;
+}
+
+message ListTeawareResponse {
+  repeated Teaware items = 1;
+}
+
+message UpsertTeawareRequest {
+  Teaware item = 1;
+}
+
+message UpsertTeawareResponse {
+  Teaware item = 1;
+}
+
+message ArchiveTeawareRequest {
+  string teaware_id = 1;
+}
+
+message ArchiveTeawareResponse {}
+
+// ---- Сетапы (TeaSetup) ----
+
+message TeaSetup {
+  string id = 1;
+  string name = 2;
+  repeated string teaware_ids = 3;
+  bool archived = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  optional google.protobuf.Timestamp archived_at = 7;
+}
+
+message ListTeaSetupsRequest {
+  bool include_archived = 1;
+}
+
+message ListTeaSetupsResponse {
+  repeated TeaSetup setups = 1;
+}
+
+message UpsertTeaSetupRequest {
+  TeaSetup setup = 1;
+}
+
+message UpsertTeaSetupResponse {
+  TeaSetup setup = 1;
+}
+
+message ArchiveTeaSetupRequest {
+  string setup_id = 1;
+}
+
+message ArchiveTeaSetupResponse {}

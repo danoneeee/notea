@@ -1,0 +1,11 @@
+node_modules
+web/node_modules
+dist
+web/dist
+.git
+.cache
+.bin
+.cursor
+coverage
+web/test-results
+web/playwright-report

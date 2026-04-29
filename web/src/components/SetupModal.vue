@@ -1,50 +1,36 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { addSetup } from '../services/setups';
+import { computed, ref } from 'vue';
+import { addSetup, type TeaSetup } from '../services/setups';
+import type { TeawareItem } from '../services/teaware';
 
 const props = defineProps<{
   modelValue: boolean;
+  teawareItems: TeawareItem[];
 }>();
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean];
-  saved: [];
+  saved: [setups: TeaSetup[]];
 }>();
 
 const setupName = ref('');
-const setupItemInput = ref('');
-const draftSetupItems = ref<string[]>([]);
+const selectedTeawareIds = ref<Set<string>>(new Set());
+
+const hasAnyTeaware = computed(() => props.teawareItems.length > 0);
 
 function close() {
   emit('update:modelValue', false);
 }
 
-function addDraftItem() {
-  const value = setupItemInput.value.trim().replace(/\s+/g, ' ');
-  if (!value) {
+async function save() {
+  const selectedIds = props.teawareItems.filter((item) => selectedTeawareIds.value.has(item.id)).map((item) => item.id);
+  if (!setupName.value.trim() || selectedIds.length === 0) {
     return;
   }
-  const hasSame = draftSetupItems.value.some((x) => x.toLowerCase() === value.toLowerCase());
-  if (!hasSame) {
-    draftSetupItems.value = [...draftSetupItems.value, value];
-  }
-  setupItemInput.value = '';
-}
-
-function removeDraftItem(item: string) {
-  draftSetupItems.value = draftSetupItems.value.filter((x) => x !== item);
-}
-
-function save() {
-  const before = JSON.stringify(draftSetupItems.value);
-  addSetup(setupName.value, draftSetupItems.value);
-  if (!setupName.value.trim() || before === '[]') {
-    return;
-  }
+  const setups = await addSetup(setupName.value, selectedIds);
   setupName.value = '';
-  setupItemInput.value = '';
-  draftSetupItems.value = [];
-  emit('saved');
+  selectedTeawareIds.value = new Set();
+  emit('saved', setups);
   close();
 }
 </script>
@@ -53,32 +39,32 @@ function save() {
   <div v-if="props.modelValue" class="backdrop" @click.self="close">
     <section class="modal">
       <h3>Новый сетап церемонии</h3>
-      <p class="hint">Сначала задай название, затем добавь элементы посуды по одному.</p>
+      <p class="hint">Сначала задай название, затем отметь посуду, которая входит в этот сетап.</p>
 
       <label class="field">
         Название сетапа
         <input v-model="setupName" type="text" placeholder="Например: Гунфу вечер" />
       </label>
-
-      <label class="field">
-        Элемент посуды
-        <div class="row">
-          <input
-            v-model="setupItemInput"
-            type="text"
-            placeholder="Чайник, гайвань, пиала..."
-            @keyup.enter="addDraftItem"
-          />
-          <button class="btn btn-ghost" type="button" @click="addDraftItem">Добавить</button>
-        </div>
-      </label>
-
-      <div v-if="draftSetupItems.length > 0" class="chips">
-        <span v-for="item in draftSetupItems" :key="item" class="chip">
-          {{ item }}
-          <button type="button" class="chip-remove" @click="removeDraftItem(item)">x</button>
-        </span>
+      <div v-if="hasAnyTeaware" class="teaware-grid">
+        <button
+          v-for="item in props.teawareItems"
+          :key="item.id"
+          type="button"
+          class="teaware-pill"
+          :class="{ 'teaware-pill--selected': selectedTeawareIds.has(item.id) }"
+          @click="
+            () => {
+              const next = new Set(selectedTeawareIds);
+              if (next.has(item.id)) next.delete(item.id);
+              else next.add(item.id);
+              selectedTeawareIds = next;
+            }
+          "
+        >
+          {{ item.name }}
+        </button>
       </div>
+      <p v-else class="hint">Сначала добавь посуду на полку, затем из неё можно будет собрать сетап.</p>
 
       <div class="actions">
         <button class="btn btn-ghost" type="button" @click="close">Отмена</button>
@@ -139,31 +125,38 @@ input {
 }
 
 .chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0 0 12px;
+  display: none;
 }
 
 .chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  display: none;
+}
+
+.chip-remove {
+  display: none;
+}
+
+.teaware-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 12px;
+}
+
+.teaware-pill {
   border: 1px solid #cfe0cb;
   background: #f3faf0;
   color: #24482d;
   border-radius: 999px;
   padding: 5px 10px;
   font-size: 13px;
+  cursor: pointer;
 }
 
-.chip-remove {
-  border: 0;
-  background: transparent;
-  color: #47684d;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 0;
+.teaware-pill--selected {
+  background: #2f7b3d;
+  border-color: #2f7b3d;
+  color: #fff;
 }
 
 .actions {

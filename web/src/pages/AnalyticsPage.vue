@@ -1,92 +1,16 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref } from 'vue';
+import { computed, defineAsyncComponent, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import DescriptorWheel from '../components/DescriptorWheel.vue';
 import { describeDescriptorPath, descriptorWheelFamilies, getDescriptorGroupById } from '../data/descriptors';
 import { listNotes, notesRevision } from '../services/notes';
-import { listSetups } from '../services/setups';
+import { listSetups, setupsRevision } from '../services/setups';
 
 const ChinaTeaMap = defineAsyncComponent(() => import('../components/ChinaTeaMap.vue'));
+const CountryTeaMap = defineAsyncComponent(() => import('../components/CountryTeaMap.vue'));
 const router = useRouter();
 
 const wheelDescriptors = descriptorWheelFamilies;
-
-function isLeafDescriptorId(raw: string) {
-  const meta = describeDescriptorPath(raw);
-  return meta.fullLabel !== raw;
-}
-
-const notes = computed(() => {
-  notesRevision.value;
-  return listNotes();
-});
-
-const activeSection = ref<'overview' | 'map' | 'brewing' | 'profile'>('overview');
-
-const selectedTeaType = ref('');
-const selectedRegion = ref('');
-const selectedBrewingMode = ref('');
-const selectedSource = ref('');
-
-function uniqueOptions(values: Array<string | null | undefined>) {
-  return [...new Set(values.map((value) => String(value ?? '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru'));
-}
-
-const teaTypeOptions = computed(() => uniqueOptions(notes.value.map((note) => note.teaType)));
-const regionOptions = computed(() => uniqueOptions(notes.value.map((note) => note.region)));
-const brewingModeOptions = computed(() => uniqueOptions(notes.value.map((note) => note.brewingMode)));
-const sourceOptions = computed(() => uniqueOptions(notes.value.map((note) => note.source)));
-
-const filteredNotes = computed(() =>
-  notes.value.filter((note) => {
-    if (selectedTeaType.value && note.teaType.trim() !== selectedTeaType.value) return false;
-    if (selectedRegion.value && note.region.trim() !== selectedRegion.value) return false;
-    if (selectedBrewingMode.value && note.brewingMode !== selectedBrewingMode.value) return false;
-    if (selectedSource.value && (note.source?.trim() ?? '') !== selectedSource.value) return false;
-    return true;
-  }),
-);
-
-const totalNotes = computed(() => filteredNotes.value.length);
-
-const provinceStats = computed(() => {
-  const map = new Map<string, number>();
-  for (const note of filteredNotes.value) {
-    const province = note.region.trim() || 'Не указан';
-    map.set(province, (map.get(province) ?? 0) + 1);
-  }
-  return [...map.entries()].sort((a, b) => b[1] - a[1]);
-});
-
-const uniqueRegions = computed(() => provinceStats.value.filter(([region]) => region !== 'Не указан').length);
-
-const topProvince = computed(() => provinceStats.value[0] ?? null);
-const topProvinceCards = computed(() => {
-  const total = totalNotes.value || 1;
-  return provinceStats.value
-    .filter(([province]) => province !== 'Не указан')
-    .slice(0, 4)
-    .map(([province, count], index) => ({
-      province,
-      count,
-      rank: index + 1,
-      percent: Math.round((count / total) * 100),
-    }));
-});
-
-const teaTypeStats = computed(() => {
-  const map = new Map<string, number>();
-  for (const note of filteredNotes.value) {
-    const teaType = note.teaType.trim() || 'Не указан';
-    map.set(teaType, (map.get(teaType) ?? 0) + 1);
-  }
-  const total = filteredNotes.value.length || 1;
-  return [...map.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([label, count]) => ({ label, count, percent: Math.round((count / total) * 100) }));
-});
-
-const topTeaType = computed(() => teaTypeStats.value[0] ?? null);
 
 const brewingModeLabels: Record<string, string> = {
   gongfu: 'Гунфу / проливы',
@@ -98,18 +22,82 @@ const brewingModeColors: Record<string, string> = {
   steep: '#7cae58',
   coldbrew: '#5c9db7',
 };
-
 const harvestSeasonLabels: Record<string, string> = {
   spring: 'Весна',
   summer: 'Лето',
   autumn: 'Осень',
   winter: 'Зима',
 };
+const liquorColorLabels: Record<string, string> = {
+  'very-light': 'Очень светлый',
+  'green-gold': 'Зелёно-золотой',
+  gold: 'Золотистый',
+  amber: 'Янтарный',
+  orange: 'Оранжево-медный',
+  'red-brown': 'Красно-коричневый',
+  dark: 'Тёмный',
+};
+const liquorColorPalette: Record<string, string> = {
+  'very-light': '#f6f3d8',
+  'green-gold': '#d8d37a',
+  gold: '#d7a94a',
+  amber: '#b8783b',
+  orange: '#b85f2f',
+  'red-brown': '#7f3d2d',
+  dark: '#473a2f',
+};
+const mouthfeelLabels: Record<string, string> = {
+  airy: 'Воздушное',
+  silky: 'Шелковистое',
+  juicy: 'Сочное',
+  oily: 'Маслянистое',
+  dense: 'Плотное',
+  drying: 'Подсушивающее',
+  creamy: 'Сливочное',
+};
+const energyEffectLabels: Record<string, string> = {
+  quiet: 'Спокойное, созерцательное',
+  warm: 'Тёплое, расслабляющее',
+  focused: 'Собранное, фокусирующее',
+  uplifting: 'Поднимающее, яркое',
+  strong: 'Сильное, телесное',
+};
+const asianCountryNames = new Set(['Китай', 'Япония', 'Корея', 'Индия', 'Непал', 'Шри-Ланка', 'Таиланд', 'Вьетнам']);
+const countryFlags: Record<string, string> = {
+  Китай: '🇨🇳',
+  Япония: '🇯🇵',
+  Корея: '🇰🇷',
+  Индия: '🇮🇳',
+  Непал: '🇳🇵',
+  'Шри-Ланка': '🇱🇰',
+  Таиланд: '🇹🇭',
+  Вьетнам: '🇻🇳',
+  Кения: '🇰🇪',
+};
 
 type CountStat = { key: string; label: string; count: number };
-type RegionRatingStat = { region: string; count: number; average: number; percent: number };
+type RegionRatingStat = { key: string; region: string; country: string; count: number; average: number; percent: number };
+type CountryRatingStat = { country: string; count: number; average: number; percent: number };
 
-function countStats(values: Array<string | null | undefined>, options?: { labelMap?: Record<string, string>; excludeEmpty?: boolean; limit?: number }) {
+function isLeafDescriptorId(raw: string) {
+  const meta = describeDescriptorPath(raw);
+  return meta.fullLabel !== raw;
+}
+
+function uniqueOptions(values: Array<string | null | undefined>) {
+  return [...new Set(values.map((value) => String(value ?? '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ru'));
+}
+
+function averageStat(values: Array<number | null | undefined>) {
+  const valid = values.filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
+  if (!valid.length) return null;
+  return valid.reduce((sum, value) => sum + value, 0) / valid.length;
+}
+
+function countStats(
+  values: Array<string | null | undefined>,
+  options?: { labelMap?: Record<string, string>; excludeEmpty?: boolean; limit?: number },
+) {
   const map = new Map<string, number>();
   for (const raw of values) {
     const value = String(raw ?? '').trim();
@@ -128,11 +116,155 @@ function countStats(values: Array<string | null | undefined>, options?: { labelM
   return entries;
 }
 
-function averageStat(values: Array<number | null | undefined>) {
-  const valid = values.filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
-  if (!valid.length) return null;
-  return valid.reduce((sum, value) => sum + value, 0) / valid.length;
+function coveragePercent(predicate: (note: (typeof filteredNotes.value)[number]) => boolean) {
+  return totalNotes.value ? Math.round((filteredNotes.value.filter(predicate).length / totalNotes.value) * 100) : 0;
 }
+
+function getCountryFlag(country: string) {
+  return countryFlags[country.trim()] ?? '';
+}
+
+const notes = computed(() => {
+  notesRevision.value;
+  return listNotes();
+});
+
+const activeSection = ref<'overview' | 'map' | 'relations' | 'brewing' | 'cup' | 'profile'>('overview');
+const geographyMapMode = ref<'china' | 'countries'>('china');
+
+const selectedTeaType = ref('');
+const selectedCountry = ref('');
+const selectedRegion = ref('');
+const selectedBrewingMode = ref('');
+const selectedHarvestSeason = ref('');
+
+const teaTypeOptions = computed(() => uniqueOptions(notes.value.map((note) => note.teaType)));
+const countryOptions = computed(() => uniqueOptions(notes.value.map((note) => note.country)));
+const regionOptions = computed(() => {
+  const base = selectedCountry.value
+    ? notes.value.filter((note) => note.country.trim() === selectedCountry.value)
+    : notes.value;
+  return uniqueOptions(base.map((note) => note.originRegion || note.region));
+});
+const brewingModeOptions = computed(() => uniqueOptions(notes.value.map((note) => note.brewingMode)));
+const harvestSeasonOptions = computed(() => uniqueOptions(notes.value.map((note) => note.harvestSeason)));
+const activeFilterCount = computed(
+  () =>
+    [
+      selectedTeaType.value,
+      selectedCountry.value,
+      selectedRegion.value,
+      selectedBrewingMode.value,
+      selectedHarvestSeason.value,
+    ].filter(Boolean).length,
+);
+
+watch(selectedCountry, () => {
+  if (selectedRegion.value && !regionOptions.value.includes(selectedRegion.value)) {
+    selectedRegion.value = '';
+  }
+});
+
+const filteredNotes = computed(() =>
+  notes.value.filter((note) => {
+    if (selectedTeaType.value && note.teaType.trim() !== selectedTeaType.value) return false;
+    if (selectedCountry.value && note.country.trim() !== selectedCountry.value) return false;
+    if (selectedRegion.value && (note.originRegion.trim() || note.region.trim()) !== selectedRegion.value) return false;
+    if (selectedBrewingMode.value && note.brewingMode !== selectedBrewingMode.value) return false;
+    if (selectedHarvestSeason.value && note.harvestSeason?.trim() !== selectedHarvestSeason.value) return false;
+    return true;
+  }),
+);
+
+const totalNotes = computed(() => filteredNotes.value.length);
+
+const provinceStats = computed(() => {
+  const map = new Map<string, number>();
+  for (const note of filteredNotes.value) {
+    const province = note.originRegion.trim() || note.region.trim() || 'Не указан';
+    map.set(province, (map.get(province) ?? 0) + 1);
+  }
+  return [...map.entries()].sort((a, b) => b[1] - a[1]);
+});
+
+const chinaProvinceStats = computed(() => {
+  const map = new Map<string, number>();
+  for (const note of filteredNotes.value) {
+    const country = note.country.trim().toLowerCase();
+    if (country && country !== 'китай') continue;
+    const province = note.originRegion.trim() || note.region.trim();
+    if (!province) continue;
+    map.set(province, (map.get(province) ?? 0) + 1);
+  }
+  return [...map.entries()].sort((a, b) => b[1] - a[1]);
+});
+
+const countryStats = computed(() => {
+  const map = new Map<string, number>();
+  for (const note of filteredNotes.value) {
+    const country = note.country.trim() || 'Не указана';
+    map.set(country, (map.get(country) ?? 0) + 1);
+  }
+  return [...map.entries()].sort((a, b) => b[1] - a[1]);
+});
+
+const teaTypeStats = computed(() => {
+  const map = new Map<string, number>();
+  for (const note of filteredNotes.value) {
+    const teaType = note.teaType.trim() || 'Не указан';
+    map.set(teaType, (map.get(teaType) ?? 0) + 1);
+  }
+  const total = totalNotes.value || 1;
+  return [...map.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, count]) => ({ label, count, percent: Math.round((count / total) * 100) }));
+});
+
+const uniqueRegions = computed(() => provinceStats.value.filter(([region]) => region !== 'Не указан').length);
+const uniqueChinaRegions = computed(() => chinaProvinceStats.value.length);
+const uniqueCountries = computed(() => countryStats.value.filter(([country]) => country !== 'Не указана').length);
+const uniqueTeaTypes = computed(() => new Set(filteredNotes.value.map((note) => note.teaType.trim() || 'Не указан')).size);
+
+const topProvince = computed(() => provinceStats.value[0] ?? null);
+const topCountry = computed(() => countryStats.value.find(([country]) => country !== 'Не указана') ?? null);
+const topTeaType = computed(() => teaTypeStats.value[0] ?? null);
+
+const topChinaProvinceCards = computed(() => {
+  const total = totalNotes.value || 1;
+  return chinaProvinceStats.value.slice(0, 4).map(([province, count], index) => ({
+    province,
+    count,
+    rank: index + 1,
+    percent: Math.round((count / total) * 100),
+  }));
+});
+const topCountryCards = computed(() => {
+  const total = totalNotes.value || 1;
+  return countryStats.value
+    .filter(([country]) => country !== 'Не указана')
+    .slice(0, 4)
+    .map(([country, count], index) => ({
+      country,
+      count,
+      rank: index + 1,
+      percent: Math.round((count / total) * 100),
+    }));
+});
+
+const countryMapScope = computed<'world' | 'asia'>(() => {
+  const countries = countryStats.value
+    .map(([country]) => country)
+    .filter((country) => country !== 'Не указана');
+  if (!countries.length) return 'world';
+  return countries.every((country) => asianCountryNames.has(country)) ? 'asia' : 'world';
+});
+const countryMapTitle = computed(() => (countryMapScope.value === 'asia' ? 'Карта стран Азии' : 'Карта мира'));
+const countryMapCopy = computed(() =>
+  countryMapScope.value === 'asia'
+    ? 'Выборка полностью азиатская, поэтому мировая карта автоматически приближена к региону.'
+    : 'Наведи на страну, чтобы увидеть плотность заметок по мировой карте.',
+);
+const countryMapMetaLabel = computed(() => (countryMapScope.value === 'asia' ? 'стран Азии отмечено' : 'стран отмечено'));
 
 const descriptorMetaById = Object.fromEntries(
   descriptorWheelFamilies.map((item) => [item.id, { label: item.label, color: item.color }]),
@@ -266,10 +398,63 @@ const exactDescriptorTeaTypeProfiles = computed(() =>
     }),
 );
 
+const brewingModeStats = computed(() =>
+  countStats(filteredNotes.value.map((note) => note.brewingMode), { labelMap: brewingModeLabels }).map((item) => ({
+    ...item,
+    percent: totalNotes.value ? Math.round((item.count / totalNotes.value) * 100) : 0,
+    color: brewingModeColors[item.key] ?? '#4f975c',
+  })),
+);
+const topBrewingMode = computed(() => brewingModeStats.value[0] ?? null);
+const brewingPortraitCopy = computed(() => {
+  const mode = topBrewingMode.value?.label;
+  if (!mode) return 'Портрет заваривания появится, когда в заметках будет больше данных по самому процессу.';
+  return `Преобладающий способ заваривания: ${mode}`;
+});
+
+const setupNameById = computed(() => {
+  setupsRevision.value;
+  return Object.fromEntries(listSetups().map((setup) => [setup.id, setup.name]));
+});
+const setupStats = computed(() =>
+  countStats(
+    filteredNotes.value.map((note) => (note.setupId ? setupNameById.value[note.setupId]?.trim() || '—' : '')),
+    { excludeEmpty: true, limit: 4 },
+  ),
+);
+const waterSourceStats = computed(() => countStats(filteredNotes.value.map((note) => note.waterSource), { excludeEmpty: true, limit: 4 }));
+const harvestSeasonStats = computed(() =>
+  countStats(filteredNotes.value.map((note) => note.harvestSeason), { labelMap: harvestSeasonLabels, excludeEmpty: true, limit: 4 }),
+);
+const liquorColorStats = computed(() =>
+  countStats(filteredNotes.value.map((note) => note.liquorColor), { labelMap: liquorColorLabels, excludeEmpty: true, limit: 4 }),
+);
+const mouthfeelStats = computed(() =>
+  countStats(filteredNotes.value.map((note) => note.mouthfeel), { labelMap: mouthfeelLabels, excludeEmpty: true, limit: 4 }),
+);
+const energyEffectStats = computed(() =>
+  countStats(filteredNotes.value.map((note) => note.energyEffect), { labelMap: energyEffectLabels, excludeEmpty: true, limit: 4 }),
+);
+
+const avgWaterTemp = computed(() => averageStat(filteredNotes.value.map((note) => note.waterTemp)));
+const avgLeafGrams = computed(() => averageStat(filteredNotes.value.map((note) => note.leafGrams)));
+const avgInfusions = computed(() => averageStat(filteredNotes.value.map((note) => note.infusionsCount)));
+const avgWaterVolume = computed(() => averageStat(filteredNotes.value.map((note) => note.waterVolumeMl)));
+const avgRinseCount = computed(() => averageStat(filteredNotes.value.map((note) => note.rinseCount)));
+
 const topDescriptor = computed(() => descriptorStats.value[0] ?? null);
+const topSetup = computed(() => setupStats.value[0]?.label ?? '—');
+const topWaterSource = computed(() => waterSourceStats.value[0]?.label ?? '—');
+const topLiquorColor = computed(() => liquorColorStats.value[0]?.label ?? '—');
+const topMouthfeel = computed(() => mouthfeelStats.value[0]?.label ?? '—');
+const topEnergyEffect = computed(() => energyEffectStats.value[0]?.label ?? '—');
+const topLiquorColorKey = computed(() => liquorColorStats.value[0]?.key ?? '');
+const topLiquorColorSwatch = computed(() => liquorColorPalette[topLiquorColorKey.value] ?? '#d9cfb0');
+
 const namedSessions = computed(() => filteredNotes.value.filter((note) => note.sessionTitle?.trim()).length);
+const favoriteNotes = computed(() => filteredNotes.value.filter((note) => note.isFavorite).length);
 const namedSessionsPercent = computed(() => (totalNotes.value ? Math.round((namedSessions.value / totalNotes.value) * 100) : 0));
-const uniqueTeaTypes = computed(() => new Set(filteredNotes.value.map((note) => note.teaType.trim() || 'Не указан')).size);
+const favoritePercent = computed(() => (totalNotes.value ? Math.round((favoriteNotes.value / totalNotes.value) * 100) : 0));
 const journalSpanDays = computed(() => {
   if (!filteredNotes.value.length) return null;
   const timestamps = filteredNotes.value.map((note) => new Date(note.updatedAt).getTime());
@@ -278,73 +463,28 @@ const journalSpanDays = computed(() => {
   return Math.max(1, Math.round((max - min) / (1000 * 60 * 60 * 24)) + 1);
 });
 
-const brewingModeStats = computed(() =>
-  countStats(
-    filteredNotes.value.map((note) => note.brewingMode),
-    { labelMap: brewingModeLabels },
-  ).map((item) => ({
-    ...item,
-    percent: totalNotes.value ? Math.round((item.count / totalNotes.value) * 100) : 0,
-    color: brewingModeColors[item.key] ?? '#4f975c',
-  })),
-);
-const topBrewingMode = computed(() => brewingModeStats.value[0] ?? null);
-const setupNameById = computed(() => Object.fromEntries(listSetups().map((setup) => [setup.id, setup.name])));
+const countryCoverage = computed(() => coveragePercent((note) => Boolean(note.country.trim())));
+const originDetailCoverage = computed(() => coveragePercent((note) => Boolean(note.originRegion.trim())));
+const harvestCoverage = computed(() => coveragePercent((note) => Boolean(note.harvestSeason?.trim()) || typeof note.harvestYear === 'number'));
+const passportNotesCoverage = computed(() => coveragePercent((note) => Boolean(note.passportNotes?.trim())));
+const setupCoverage = computed(() => coveragePercent((note) => Boolean(note.setupId || note.setupSummary.trim())));
+const descriptorCoverage = computed(() => coveragePercent((note) => note.descriptors.length > 0));
 
-const setupStats = computed(
+const passportRichNotes = computed(
   () =>
-    countStats(
-      filteredNotes.value.map((note) => {
-        if (note.setupId) return setupNameById.value[note.setupId] ?? 'Сетап без названия';
-        return '';
-      }),
-      { excludeEmpty: true, limit: 4 },
-    ),
+    filteredNotes.value.filter((note) => {
+      const filled = [
+        Boolean(note.country.trim()),
+        Boolean(note.originRegion.trim()),
+        Boolean(note.harvestSeason?.trim()),
+        typeof note.harvestYear === 'number',
+        Boolean(note.passportNotes?.trim()),
+      ].filter(Boolean).length;
+      return filled >= 3;
+    }).length,
 );
-const waterSourceStats = computed(() => countStats(filteredNotes.value.map((note) => note.waterSource), { excludeEmpty: true, limit: 4 }));
-const sourceStats = computed(() => countStats(filteredNotes.value.map((note) => note.source), { excludeEmpty: true, limit: 4 }));
-const processingStyleStats = computed(() => countStats(filteredNotes.value.map((note) => note.processingStyle), { excludeEmpty: true, limit: 4 }));
-const harvestSeasonStats = computed(() => countStats(filteredNotes.value.map((note) => note.harvestSeason), { labelMap: harvestSeasonLabels, excludeEmpty: true, limit: 4 }));
-const cultivarStats = computed(() => countStats(filteredNotes.value.map((note) => note.cultivar), { excludeEmpty: true, limit: 4 }));
-const avgWaterTemp = computed(() => averageStat(filteredNotes.value.map((note) => note.waterTemp)));
-const avgLeafGrams = computed(() => averageStat(filteredNotes.value.map((note) => note.leafGrams)));
-const avgInfusions = computed(() => averageStat(filteredNotes.value.map((note) => note.infusionsCount)));
-const avgWaterVolume = computed(() => averageStat(filteredNotes.value.map((note) => note.waterVolumeMl)));
-const avgRinseCount = computed(() => averageStat(filteredNotes.value.map((note) => note.rinseCount)));
-const originDetailCoverage = computed(
-  () => (totalNotes.value ? Math.round((filteredNotes.value.filter((note) => Boolean(note.originDetail?.trim())).length / totalNotes.value) * 100) : 0),
-);
-const sourceCoverage = computed(
-  () => (totalNotes.value ? Math.round((filteredNotes.value.filter((note) => Boolean(note.source?.trim())).length / totalNotes.value) * 100) : 0),
-);
-const waterSourceCoverage = computed(
-  () => (totalNotes.value ? Math.round((filteredNotes.value.filter((note) => Boolean(note.waterSource?.trim())).length / totalNotes.value) * 100) : 0),
-);
-const rinseCoverage = computed(
-  () => (totalNotes.value ? Math.round((filteredNotes.value.filter((note) => typeof note.rinseCount === 'number').length / totalNotes.value) * 100) : 0),
-);
-const infusionsCoverage = computed(
-  () => (totalNotes.value ? Math.round((filteredNotes.value.filter((note) => typeof note.infusionsCount === 'number').length / totalNotes.value) * 100) : 0),
-);
-const brewingMethodCoverage = computed(
-  () => (totalNotes.value ? Math.round((filteredNotes.value.filter((note) => Boolean(note.brewingMethod.trim())).length / totalNotes.value) * 100) : 0),
-);
-const topSource = computed(() => sourceStats.value[0]?.label ?? '—');
-const topSetup = computed(() => setupStats.value[0]?.label ?? '—');
-const topWaterSource = computed(() => waterSourceStats.value[0]?.label ?? '—');
-const exactOriginStats = computed(() => {
-  const map = new Map<string, { region: string; origin: string; count: number }>();
-  for (const note of filteredNotes.value) {
-    const region = note.region.trim();
-    const origin = note.originDetail?.trim() ?? '';
-    if (!region || !origin) continue;
-    const key = `${region}::${origin}`;
-    const current = map.get(key);
-    if (current) current.count += 1;
-    else map.set(key, { region, origin, count: 1 });
-  }
-  return [...map.values()].sort((a, b) => b.count - a.count).slice(0, 6);
-});
+const passportRichPercent = computed(() => (totalNotes.value ? Math.round((passportRichNotes.value / totalNotes.value) * 100) : 0));
+
 const harvestYearSummary = computed(() => {
   const values = filteredNotes.value
     .map((note) => note.harvestYear)
@@ -358,19 +498,69 @@ const harvestYearSummary = computed(() => {
   };
 });
 
-function buildRegionRatingStats(metric: keyof typeof filteredNotes.value[number]['ratings']): RegionRatingStat[] {
-  const map = new Map<string, { count: number; total: number }>();
+const averageCupRating = computed(() =>
+  averageStat(
+    filteredNotes.value.map((note) => {
+      const ratings = Object.values(note.ratings);
+      return ratings.length ? ratings.reduce((sum, value) => sum + value, 0) / ratings.length : null;
+    }),
+  ),
+);
+const averageRatingByMetric = computed(() => ({
+  aroma: averageStat(filteredNotes.value.map((note) => note.ratings.aroma)),
+  taste: averageStat(filteredNotes.value.map((note) => note.ratings.taste)),
+  aftertaste: averageStat(filteredNotes.value.map((note) => note.ratings.aftertaste)),
+  balance: averageStat(filteredNotes.value.map((note) => note.ratings.balance)),
+}));
+const ratingSummaryCards = computed(() => [
+  {
+    key: 'aroma',
+    title: 'Аромат',
+    average: averageRatingByMetric.value.aroma,
+    percent: averageRatingByMetric.value.aroma ? Math.round((averageRatingByMetric.value.aroma / 5) * 100) : 0,
+  },
+  {
+    key: 'taste',
+    title: 'Вкус',
+    average: averageRatingByMetric.value.taste,
+    percent: averageRatingByMetric.value.taste ? Math.round((averageRatingByMetric.value.taste / 5) * 100) : 0,
+  },
+  {
+    key: 'aftertaste',
+    title: 'Послевкусие',
+    average: averageRatingByMetric.value.aftertaste,
+    percent: averageRatingByMetric.value.aftertaste ? Math.round((averageRatingByMetric.value.aftertaste / 5) * 100) : 0,
+  },
+  {
+    key: 'balance',
+    title: 'Баланс',
+    average: averageRatingByMetric.value.balance,
+    percent: averageRatingByMetric.value.balance ? Math.round((averageRatingByMetric.value.balance / 5) * 100) : 0,
+  },
+]);
+const cupPortraitCopy = computed(() => {
+  const parts = [topLiquorColor.value, topMouthfeel.value, topEnergyEffect.value].filter((item) => item && item !== '—');
+  if (!parts.length) return 'Портрет чашки появится, когда в заметках будут оценки и ощущения после сессии.';
+  return `Чаще всего это ${parts.join(', ').toLowerCase()} чашка.`;
+});
+
+function buildRegionRatingStats(metric: keyof (typeof filteredNotes.value)[number]['ratings']): RegionRatingStat[] {
+  const map = new Map<string, { region: string; country: string; count: number; total: number }>();
   for (const note of filteredNotes.value) {
-    const region = note.region.trim();
+    const region = note.originRegion.trim() || note.region.trim();
     if (!region) continue;
-    const current = map.get(region) ?? { count: 0, total: 0 };
+    const country = note.country.trim() || 'Страна не указана';
+    const key = `${country}__${region}`;
+    const current = map.get(key) ?? { region, country, count: 0, total: 0 };
     current.count += 1;
     current.total += note.ratings[metric];
-    map.set(region, current);
+    map.set(key, current);
   }
   return [...map.entries()]
-    .map(([region, stats]) => ({
-      region,
+    .map(([key, stats]) => ({
+      key,
+      region: stats.region,
+      country: stats.country,
       count: stats.count,
       average: stats.total / stats.count,
     }))
@@ -382,45 +572,110 @@ function buildRegionRatingStats(metric: keyof typeof filteredNotes.value[number]
     }));
 }
 
+function buildCountryRatingStats(metric: keyof (typeof filteredNotes.value)[number]['ratings']): CountryRatingStat[] {
+  const map = new Map<string, { count: number; total: number }>();
+  for (const note of filteredNotes.value) {
+    const country = note.country.trim();
+    if (!country) continue;
+    const current = map.get(country) ?? { count: 0, total: 0 };
+    current.count += 1;
+    current.total += note.ratings[metric];
+    map.set(country, current);
+  }
+  return [...map.entries()]
+    .map(([country, stats]) => ({
+      country,
+      count: stats.count,
+      average: stats.total / stats.count,
+      percent: Math.round((stats.total / stats.count / 5) * 100),
+    }))
+    .sort((a, b) => b.average - a.average || b.count - a.count)
+    .slice(0, 4);
+}
+
 const regionAromaStats = computed(() => buildRegionRatingStats('aroma'));
 const regionTasteStats = computed(() => buildRegionRatingStats('taste'));
 const regionAftertasteStats = computed(() => buildRegionRatingStats('aftertaste'));
 const regionBalanceStats = computed(() => buildRegionRatingStats('balance'));
+const countryAromaStats = computed(() => buildCountryRatingStats('aroma'));
+const countryTasteStats = computed(() => buildCountryRatingStats('taste'));
+const countryAftertasteStats = computed(() => buildCountryRatingStats('aftertaste'));
+const countryBalanceStats = computed(() => buildCountryRatingStats('balance'));
 const regionRatingCards = computed(() => [
   {
     key: 'aroma',
-    title: 'Аромат по регионам',
+    title: 'Аромат',
     copy: 'Где чаще всего попадаются самые выразительные ароматы.',
     items: regionAromaStats.value,
   },
   {
     key: 'taste',
-    title: 'Вкус по регионам',
+    title: 'Вкус',
     copy: 'Рейтинг регионов по средней силе вкуса в заметках.',
     items: regionTasteStats.value,
   },
   {
     key: 'aftertaste',
-    title: 'Послевкусие по регионам',
+    title: 'Послевкусие',
     copy: 'Какие регионы чаще оставляют самый длинный и приятный хвост.',
     items: regionAftertasteStats.value,
   },
   {
     key: 'balance',
-    title: 'Баланс по регионам',
+    title: 'Баланс',
     copy: 'Насколько гармоничными в среднем оказываются чаи из региона.',
     items: regionBalanceStats.value,
   },
 ]);
-const regionDescriptorProfiles = computed(() =>
-  provinceStats.value
-    .filter(([region]) => region !== 'Не указан')
+const countryRatingCards = computed(() => [
+  {
+    key: 'aroma',
+    title: 'Аромат',
+    copy: 'Средняя оценка аромата по странам происхождения.',
+    items: countryAromaStats.value,
+  },
+  {
+    key: 'taste',
+    title: 'Вкус',
+    copy: 'Какие страны чаще дают самые сильные вкусовые впечатления.',
+    items: countryTasteStats.value,
+  },
+  {
+    key: 'aftertaste',
+    title: 'Послевкусие',
+    copy: 'Где в среднем получается самый длинный и приятный хвост.',
+    items: countryAftertasteStats.value,
+  },
+  {
+    key: 'balance',
+    title: 'Баланс',
+    copy: 'Насколько гармоничными оказываются чаи по странам происхождения.',
+    items: countryBalanceStats.value,
+  },
+]);
+
+const regionDescriptorProfiles = computed(() => {
+  const regionMap = new Map<string, { key: string; region: string; country: string; notesCount: number }>();
+  for (const note of filteredNotes.value) {
+    const region = note.originRegion.trim() || note.region.trim();
+    if (!region) continue;
+    const country = note.country.trim() || 'Страна не указана';
+    const key = `${country}__${region}`;
+    const current = regionMap.get(key) ?? { key, region, country, notesCount: 0 };
+    current.notesCount += 1;
+    regionMap.set(key, current);
+  }
+
+  return [...regionMap.values()]
+    .sort((a, b) => b.notesCount - a.notesCount)
     .slice(0, 4)
-    .map(([region, notesCount]) => {
+    .map((entry) => {
       const familyCounts = new Map<string, number>();
       let notesWithDescriptorsCount = 0;
       for (const note of filteredNotes.value) {
-        if ((note.region.trim() || 'Не указан') !== region) continue;
+        const region = note.originRegion.trim() || note.region.trim();
+        const country = note.country.trim() || 'Страна не указана';
+        if (`${country}__${region}` !== entry.key) continue;
         if (!note.descriptors.length) continue;
         notesWithDescriptorsCount += 1;
         for (const descriptor of note.descriptors) {
@@ -437,42 +692,178 @@ const regionDescriptorProfiles = computed(() =>
           color: descriptorMetaById[id]?.color ?? '#d9e5d6',
         }));
       return {
-        region,
-        notesCount,
+        ...entry,
         notesWithDescriptorsCount,
         topDescriptors,
       };
-    }),
-);
+    });
+});
 
-const passportRichNotes = computed(
-  () =>
-    filteredNotes.value.filter((note) => {
-      const filled = [note.originDetail, note.cultivar, note.source, note.processingStyle, note.harvestSeason, note.harvestYear]
-        .filter((value) => value !== null && value !== undefined && String(value).trim() !== '').length;
-      return filled >= 3;
-    }).length,
-);
-const passportRichPercent = computed(() => (totalNotes.value ? Math.round((passportRichNotes.value / totalNotes.value) * 100) : 0));
-const setupCoverage = computed(
-  () => (totalNotes.value ? Math.round((filteredNotes.value.filter((note) => note.setupSummary.trim()).length / totalNotes.value) * 100) : 0),
-);
-const cupProfileCoverage = computed(
-  () =>
-    (totalNotes.value
-      ? Math.round(
-          (
-            filteredNotes.value.filter((note) => Boolean(note.liquorColor || note.mouthfeel || note.energyEffect)).length / totalNotes.value
-          ) * 100,
-        )
-      : 0),
+type InsightCard = {
+  key: string;
+  title: string;
+  lead: string;
+  detail: string;
+  context?: string;
+  accent?: string;
+};
+
+function formatShare(count: number, total: number) {
+  return total > 0 ? Math.round((count / total) * 100) : 0;
+}
+
+const setupTeaTypeInsight = computed<InsightCard | null>(() => {
+  const setupMap = new Map<string, { total: number; teaTypes: Map<string, number> }>();
+  for (const note of filteredNotes.value) {
+    const setup = (note.setupId ? setupNameById.value[note.setupId] : '') || note.setupSummary.trim();
+    const teaType = note.teaType.trim();
+    if (!setup || !teaType) continue;
+    const current = setupMap.get(setup) ?? { total: 0, teaTypes: new Map<string, number>() };
+    current.total += 1;
+    current.teaTypes.set(teaType, (current.teaTypes.get(teaType) ?? 0) + 1);
+    setupMap.set(setup, current);
+  }
+
+  let best: InsightCard | null = null;
+  let bestScore = 0;
+  for (const [setup, stats] of setupMap.entries()) {
+    if (stats.total < 2) continue;
+    const top = [...stats.teaTypes.entries()].sort((a, b) => b[1] - a[1])[0];
+    if (!top) continue;
+    const [teaType, count] = top;
+    const share = count / stats.total;
+    const score = share * stats.total;
+    if (share < 0.6 || score <= bestScore) continue;
+    bestScore = score;
+    best = {
+      key: `setup-${setup}`,
+      title: 'Паттерн посуды',
+      lead: `В сетапе «${setup}» ты чаще всего пьёшь ${teaType}.`,
+      detail: `${count} из ${stats.total} сессий с этим сетапом пришлись на этот тип чая.`,
+      context: `${formatShare(count, stats.total)}% использования сетапа`,
+      accent: 'setup',
+    };
+  }
+  return best;
+});
+
+const regionDescriptorInsight = computed<InsightCard | null>(() => {
+  let best: InsightCard | null = null;
+  let bestScore = 0;
+  for (const item of regionDescriptorProfiles.value) {
+    if (!item.topDescriptors.length || item.notesCount < 2) continue;
+    const score = item.notesWithDescriptorsCount / item.notesCount;
+    if (score <= bestScore) continue;
+    bestScore = score;
+    best = {
+      key: `region-descriptor-${item.key}`,
+      title: 'Паттерн региона',
+      lead: `${item.region} у тебя чаще всего звучит как ${item.topDescriptors.map((part) => part.label).join(', ')}.`,
+      detail: `${item.country} · дескрипторы отмечены в ${item.notesWithDescriptorsCount} из ${item.notesCount} заметок по этому региону.`,
+      context: `${formatShare(item.notesWithDescriptorsCount, item.notesCount)}% заметок с отмеченными нотами`,
+      accent: 'region',
+    };
+  }
+  return best;
+});
+
+const countryRatingInsight = computed<InsightCard | null>(() => {
+  const countryLeaders = [
+    { label: 'аромату', items: countryAromaStats.value },
+    { label: 'вкусу', items: countryTasteStats.value },
+    { label: 'послевкусию', items: countryAftertasteStats.value },
+    { label: 'балансу', items: countryBalanceStats.value },
+  ];
+
+  let best: InsightCard | null = null;
+  let bestAverage = 0;
+  for (const group of countryLeaders) {
+    const top = group.items[0];
+    if (!top || top.count < 2) continue;
+    if (top.average <= bestAverage) continue;
+    bestAverage = top.average;
+    best = {
+      key: `country-rating-${group.label}`,
+      title: 'Сильная страна',
+      lead: `${top.country} в этой выборке лидирует по ${group.label}.`,
+      detail: `Средняя оценка — ${top.average.toFixed(1)}/5 по ${top.count} заметкам.`,
+      context: `Максимальный показатель внутри текущего среза`,
+      accent: 'country',
+    };
+  }
+  return best;
+});
+
+const teaTypeDescriptorInsight = computed<InsightCard | null>(() => {
+  let best: InsightCard | null = null;
+  let bestCoverage = 0;
+  for (const item of exactDescriptorTeaTypeProfiles.value) {
+    if (!item.topLeaves.length || item.notesCount < 2) continue;
+    if (item.coverage <= bestCoverage) continue;
+    bestCoverage = item.coverage;
+    best = {
+      key: `tea-type-${item.teaType}`,
+      title: 'Паттерн типа чая',
+      lead: `${item.teaType} у тебя чаще всего описывается как ${item.topLeaves.map((leaf) => leaf.label).join(', ')}.`,
+      detail: `Точные ноты есть в ${item.notesWithLeaf} из ${item.notesCount} заметок этого типа.`,
+      context: `${item.coverage}% заметок с точными нотами`,
+      accent: 'teaType',
+    };
+  }
+  return best;
+});
+
+const brewingModeEnergyInsight = computed<InsightCard | null>(() => {
+  const modeMap = new Map<string, { total: number; effects: Map<string, number> }>();
+  for (const note of filteredNotes.value) {
+    const mode = brewingModeLabels[note.brewingMode] ?? note.brewingMode;
+    const effect = energyEffectLabels[note.energyEffect?.trim() ?? ''] ?? '';
+    if (!mode || !effect) continue;
+    const current = modeMap.get(mode) ?? { total: 0, effects: new Map<string, number>() };
+    current.total += 1;
+    current.effects.set(effect, (current.effects.get(effect) ?? 0) + 1);
+    modeMap.set(mode, current);
+  }
+
+  let best: InsightCard | null = null;
+  let bestScore = 0;
+  for (const [mode, stats] of modeMap.entries()) {
+    if (stats.total < 2) continue;
+    const top = [...stats.effects.entries()].sort((a, b) => b[1] - a[1])[0];
+    if (!top) continue;
+    const [effect, count] = top;
+    const share = count / stats.total;
+    const score = share * stats.total;
+    if (share < 0.6 || score <= bestScore) continue;
+    bestScore = score;
+    best = {
+      key: `mode-${mode}`,
+      title: 'Паттерн состояния',
+      lead: `${mode} у тебя чаще всего связано с состоянием «${effect}».`,
+      detail: `${count} из ${stats.total} заметок в этом режиме заканчиваются именно таким эффектом.`,
+      context: `${formatShare(count, stats.total)}% заметок по режиму`,
+      accent: 'energy',
+    };
+  }
+  return best;
+});
+
+const analyticsInsights = computed(() =>
+  [
+    setupTeaTypeInsight.value,
+    regionDescriptorInsight.value,
+    countryRatingInsight.value,
+    teaTypeDescriptorInsight.value,
+    brewingModeEnergyInsight.value,
+  ].filter((item): item is InsightCard => Boolean(item)),
 );
 
 function clearFilters() {
   selectedTeaType.value = '';
+  selectedCountry.value = '';
   selectedRegion.value = '';
   selectedBrewingMode.value = '';
-  selectedSource.value = '';
+  selectedHarvestSeason.value = '';
 }
 
 function openFilteredNotes() {
@@ -480,9 +871,10 @@ function openFilteredNotes() {
     name: 'app-notes',
     query: {
       ...(selectedTeaType.value ? { teaType: selectedTeaType.value } : {}),
+      ...(selectedCountry.value ? { country: selectedCountry.value } : {}),
       ...(selectedRegion.value ? { region: selectedRegion.value } : {}),
       ...(selectedBrewingMode.value ? { brewingMode: selectedBrewingMode.value } : {}),
-      ...(selectedSource.value ? { source: selectedSource.value } : {}),
+      ...(selectedHarvestSeason.value ? { harvestSeason: selectedHarvestSeason.value } : {}),
     },
   });
 }
@@ -493,7 +885,7 @@ function openFilteredNotes() {
     <div class="hero">
       <div>
         <h2>Аналитика</h2>
-        <p class="lead">Раздел разбит по критериям: обзор записей, география происхождения и вкусовой профиль.</p>
+        <p class="lead">Раздел разбит по критериям: обзор записей, география, наблюдения, заваривание, профиль чашки и вкусовой профиль.</p>
       </div>
     </div>
 
@@ -503,8 +895,8 @@ function openFilteredNotes() {
     <template v-else>
       <section class="filters">
         <div class="criteria-head">
-          <h3>Фильтры</h3>
-          <p>Выбери срез, чтобы посмотреть более точную аналитику по типу чая, региону, режиму заваривания или источнику.</p>
+          <h3>Фильтры и выборка</h3>
+          <p>Собери срез сверху, а все секции ниже перестроятся под выбранный тип чая, страну, регион, сезон и способ заваривания.</p>
         </div>
         <div class="filter-grid">
           <label class="filter-field">
@@ -515,29 +907,36 @@ function openFilteredNotes() {
             </select>
           </label>
           <label class="filter-field">
-            <span>Регион</span>
+            <span>Страна</span>
+            <select v-model="selectedCountry">
+              <option value="">Все страны</option>
+              <option v-for="option in countryOptions" :key="option" :value="option">{{ option }}</option>
+            </select>
+          </label>
+          <label class="filter-field">
+            <span>Провинция / регион</span>
             <select v-model="selectedRegion">
               <option value="">Все регионы</option>
               <option v-for="option in regionOptions" :key="option" :value="option">{{ option }}</option>
             </select>
           </label>
           <label class="filter-field">
-            <span>Режим</span>
+            <span>Режим заваривания</span>
             <select v-model="selectedBrewingMode">
               <option value="">Все режимы</option>
               <option v-for="option in brewingModeOptions" :key="option" :value="option">{{ brewingModeLabels[option] ?? option }}</option>
             </select>
           </label>
           <label class="filter-field">
-            <span>Источник</span>
-            <select v-model="selectedSource">
-              <option value="">Любой источник</option>
-              <option v-for="option in sourceOptions" :key="option" :value="option">{{ option }}</option>
+            <span>Сезон сбора</span>
+            <select v-model="selectedHarvestSeason">
+              <option value="">Любой сезон</option>
+              <option v-for="option in harvestSeasonOptions" :key="option" :value="option">{{ harvestSeasonLabels[option] ?? option }}</option>
             </select>
           </label>
         </div>
         <div class="filter-footer">
-          <span class="filter-meta">В выборке: {{ totalNotes }} заметок</span>
+          <span class="filter-meta">В выборке: {{ totalNotes }} заметок{{ activeFilterCount ? ` · активных фильтров: ${activeFilterCount}` : '' }}</span>
           <div class="filter-actions">
             <button type="button" class="clear-btn" @click="openFilteredNotes">Открыть в заметках</button>
             <button type="button" class="clear-btn" @click="clearFilters">Сбросить фильтры</button>
@@ -549,7 +948,7 @@ function openFilteredNotes() {
         По текущим фильтрам заметок не найдено. Попробуй снять часть ограничений.
       </div>
       <template v-else>
-      <div class="analytics-layout">
+        <div class="analytics-layout">
         <aside class="section-sidebar" aria-label="Навигация по аналитике">
           <nav class="section-nav">
             <button
@@ -579,10 +978,26 @@ function openFilteredNotes() {
             <button
               type="button"
               class="nav-chip"
+              :class="{ active: activeSection === 'cup' }"
+              @click="activeSection = 'cup'"
+            >
+              Профиль чашки
+            </button>
+            <button
+              type="button"
+              class="nav-chip"
               :class="{ active: activeSection === 'profile' }"
               @click="activeSection = 'profile'"
             >
               Вкусовой профиль
+            </button>
+            <button
+              type="button"
+              class="nav-chip"
+              :class="{ active: activeSection === 'relations' }"
+              @click="activeSection = 'relations'"
+            >
+              Наблюдения
             </button>
           </nav>
         </aside>
@@ -631,8 +1046,12 @@ function openFilteredNotes() {
                     <strong>{{ topTeaType?.label ?? '—' }}</strong>
                   </li>
                   <li>
-                    <span class="insight-label">Главный регион</span>
-                    <strong>{{ topProvince?.[0] ?? '—' }}</strong>
+                    <span class="insight-label">Главная страна</span>
+                    <strong v-if="topCountry" class="country-badge country-badge-inline">
+                      <span v-if="getCountryFlag(topCountry[0])" class="country-flag" aria-hidden="true">{{ getCountryFlag(topCountry[0]) }}</span>
+                      <span>{{ topCountry[0] }}</span>
+                    </strong>
+                    <strong v-else>—</strong>
                   </li>
                   <li>
                     <span class="insight-label">Основной режим</span>
@@ -665,12 +1084,12 @@ function openFilteredNotes() {
                     <strong>{{ passportRichPercent }}%</strong>
                   </li>
                   <li>
-                    <span class="insight-label">Заметок с сетапом</span>
-                    <strong>{{ setupCoverage }}%</strong>
+                    <span class="insight-label">Избранных заметок</span>
+                    <strong>{{ favoritePercent }}%</strong>
                   </li>
                   <li>
-                    <span class="insight-label">Чашка и состояние отмечены</span>
-                    <strong>{{ cupProfileCoverage }}%</strong>
+                    <span class="insight-label">Заметок с сетапом</span>
+                    <strong>{{ setupCoverage }}%</strong>
                   </li>
                 </ul>
               </article>
@@ -684,34 +1103,69 @@ function openFilteredNotes() {
           >
             <div class="criteria-head">
               <h3>География</h3>
-              <p>Карта показывает, из каких провинций и регионов чаще всего появляется чай в твоих заметках.</p>
+              <p>Здесь остаётся чистая география: карты и лидеры по странам и провинциям без перекрёстных связей с вкусом.</p>
             </div>
             <div class="analytics-grid geography-grid">
               <article class="box map-box geography-map">
                 <div class="section-head">
                   <div>
-                    <h3>Карта провинций</h3>
-                    <p class="section-copy">Наведи на регион, чтобы увидеть плотность заметок по карте.</p>
+                    <h3>{{ geographyMapMode === 'china' ? 'Карта провинций' : countryMapTitle }}</h3>
+                    <p class="section-copy">
+                      {{
+                        geographyMapMode === 'china'
+                          ? 'Наведи на регион, чтобы увидеть плотность заметок по карте.'
+                          : countryMapCopy
+                      }}
+                    </p>
+                  </div>
+                  <div class="map-mode-switch" role="tablist" aria-label="Режим географической карты">
+                    <button
+                      type="button"
+                      class="map-mode-btn"
+                      :class="{ active: geographyMapMode === 'china' }"
+                      @click="geographyMapMode = 'china'"
+                    >
+                      Китай
+                    </button>
+                    <button
+                      type="button"
+                      class="map-mode-btn"
+                      :class="{ active: geographyMapMode === 'countries' }"
+                      @click="geographyMapMode = 'countries'"
+                    >
+                      {{ countryMapScope === 'asia' ? 'Азия' : 'Мир' }}
+                    </button>
                   </div>
                   <div class="section-meta">
-                    <strong>{{ uniqueRegions }}</strong>
-                    <span>регионов отмечено</span>
+                    <strong>{{ geographyMapMode === 'china' ? uniqueChinaRegions : uniqueCountries }}</strong>
+                    <span>{{ geographyMapMode === 'china' ? 'регионов отмечено' : countryMapMetaLabel }}</span>
                   </div>
                 </div>
                 <div class="map-row">
-                  <ChinaTeaMap :province-stats="provinceStats" />
+                  <ChinaTeaMap v-if="geographyMapMode === 'china'" :province-stats="chinaProvinceStats" />
+                  <CountryTeaMap
+                    v-else
+                    :country-stats="countryStats"
+                    :focus-region="countryMapScope"
+                  />
                 </div>
               </article>
 
               <article class="box geography-top-box">
                 <div class="section-head compact">
                   <div>
-                    <h3>Топ по провинциям</h3>
-                    <p class="section-copy">Короткая сводка по регионам, которые чаще всего встречаются в текущем срезе.</p>
+                    <h3>{{ geographyMapMode === 'china' ? 'Топ по провинциям' : 'Топ по странам' }}</h3>
+                    <p class="section-copy">
+                      {{
+                        geographyMapMode === 'china'
+                          ? 'Короткая сводка по регионам, которые чаще всего встречаются в текущем срезе.'
+                          : 'Короткая сводка по странам, которые чаще всего встречаются в текущем срезе.'
+                      }}
+                    </p>
                   </div>
                 </div>
-                <div v-if="topProvinceCards.length" class="province-top-grid">
-                  <article v-for="item in topProvinceCards" :key="item.province" class="province-top-card">
+                <div v-if="geographyMapMode === 'china' && topChinaProvinceCards.length" class="province-top-grid">
+                  <article v-for="item in topChinaProvinceCards" :key="item.province" class="province-top-card">
                     <span
                       class="province-rank province-rank-badge"
                       :class="`province-rank-badge--${Math.min(item.rank, 4)}`"
@@ -723,75 +1177,29 @@ function openFilteredNotes() {
                     <span class="province-top-share">{{ item.percent }}% выборки</span>
                   </article>
                 </div>
-                <p v-else class="mini-empty">Для текущего среза пока нет провинций с заполненными данными.</p>
-              </article>
-
-              <div class="analytics-divider" aria-hidden="true">
-                <span />
-              </div>
-
-              <div class="region-rating-group">
-                <article
-                  v-for="card in regionRatingCards"
-                  :key="card.key"
-                  class="box region-rating-metric-box"
-                >
-                  <div class="section-head compact region-rating-head">
-                    <div>
-                      <h3>{{ card.title }}</h3>
-                      <p class="section-copy">{{ card.copy }}</p>
-                    </div>
-                  </div>
-                  <ol v-if="card.items.length" class="rank-list region-rating-list">
-                    <li v-for="item in card.items" :key="item.region">
-                      <span class="rank-label">
-                        <span class="region-rating-name">{{ item.region }}</span>
-                        <span class="region-rating-notes">Средняя оценка</span>
-                      </span>
-                      <span class="region-rating-meta">
-                        <strong>{{ item.average.toFixed(1) }}/5</strong>
-                      </span>
-                    </li>
-                  </ol>
-                  <p v-else class="mini-empty">Рейтинг появится, когда в заметках будут оценки и заполненные регионы.</p>
-                </article>
-              </div>
-
-              <div class="analytics-divider" aria-hidden="true">
-                <span />
-              </div>
-
-              <article class="box region-descriptor-box">
-                <div class="section-head compact">
-                  <div>
-                    <h3>Регион x дескрипторы</h3>
-                    <p class="section-copy">Какие ноты чаще всего звучат у ведущих регионов в твоих заметках.</p>
-                  </div>
-                </div>
-                <div v-if="regionDescriptorProfiles.length" class="region-descriptor-grid">
-                  <article
-                    v-for="item in regionDescriptorProfiles"
-                    :key="item.region"
-                    class="region-descriptor-card"
-                  >
-                    <div class="region-descriptor-head">
-                      <strong>{{ item.region }}</strong>
-                      <span>{{ item.notesWithDescriptorsCount ? 'Профиль собран' : 'Пока мало дескрипторов' }}</span>
-                    </div>
-                    <div v-if="item.topDescriptors.length" class="descriptor-pill-list">
-                      <span
-                        v-for="descriptor in item.topDescriptors"
-                        :key="`${item.region}-${descriptor.id}`"
-                        class="descriptor-pill"
-                      >
-                        <span class="descriptor-dot" :style="{ background: descriptor.color }" />
-                        <span>{{ descriptor.label }}</span>
-                      </span>
-                    </div>
-                    <p v-else class="mini-empty">У заметок из этого региона пока не хватает отмеченных дескрипторов.</p>
+                <div v-else-if="geographyMapMode === 'countries' && topCountryCards.length" class="province-top-grid">
+                  <article v-for="item in topCountryCards" :key="item.country" class="province-top-card">
+                    <span
+                      class="province-rank province-rank-badge"
+                      :class="`province-rank-badge--${Math.min(item.rank, 4)}`"
+                    >
+                      {{ item.rank }}
+                    </span>
+                    <strong class="country-badge">
+                      <span v-if="getCountryFlag(item.country)" class="country-flag" aria-hidden="true">{{ getCountryFlag(item.country) }}</span>
+                      <span>{{ item.country }}</span>
+                    </strong>
+                    <span class="province-top-meta">{{ item.count }} заметок</span>
+                    <span class="province-top-share">{{ item.percent }}% выборки</span>
                   </article>
                 </div>
-                <p v-else class="mini-empty">Блок появится, когда в заметках будут регионы с отмеченными дескрипторами.</p>
+                <p v-else class="mini-empty">
+                  {{
+                    geographyMapMode === 'china'
+                      ? 'Для текущего среза пока нет провинций Китая с заполненными данными.'
+                      : 'Для текущего среза пока нет стран с заполненными данными.'
+                  }}
+                </p>
               </article>
             </div>
           </section>
@@ -803,152 +1211,183 @@ function openFilteredNotes() {
           >
             <div class="criteria-head">
               <h3>Практика заваривания</h3>
-              <p>Раздел про сам ритуал: как ты чаще всего завариваешь, чем пользуешься и насколько подробно фиксируешь процесс.</p>
+              <p>Раздел про сам ритуал: в каком режиме ты обычно завариваешь, на что опираешься по параметрам и какая посуда с водой чаще сопровождают сессию.</p>
             </div>
             <div class="analytics-grid brewing-grid">
-              <article class="box brewing-mode-box">
+              <article class="box brewing-portrait-box">
                 <div class="section-head compact">
                   <div>
-                    <h3>Сценарии заваривания</h3>
-                    <p class="section-copy">Три главных режима сессий и их реальная доля в твоих заметках.</p>
+                    <h3>Почерк заваривания</h3>
+                    <p class="section-copy">Короткая выжимка по режиму, базовым параметрам и общему характеру твоих сессий.</p>
                   </div>
                 </div>
-                <div v-if="brewingModeStats.length" class="brew-mode-strip" aria-hidden="true">
-                  <span
-                    v-for="item in brewingModeStats"
-                    :key="`${item.key}-strip`"
-                    class="brew-mode-strip-segment"
-                    :style="{ width: `${Math.max(item.percent, 12)}%`, background: item.color }"
-                  />
+                <div class="brewing-portrait-layout">
+                  <div class="brewing-portrait-copy">
+                    <strong>{{ brewingPortraitCopy }}</strong>
+                    <div class="brewing-summary-chips">
+                      <span v-if="topSetup !== '—'" class="brewing-summary-chip">{{ topSetup }}</span>
+                    </div>
+                    <div v-if="brewingModeStats.length" class="brew-mode-strip" aria-hidden="true">
+                      <span
+                        v-for="item in brewingModeStats"
+                        :key="`${item.key}-strip`"
+                        class="brew-mode-strip-segment"
+                        :style="{ width: `${Math.max(item.percent, 12)}%`, background: item.color }"
+                      />
+                    </div>
+                    <div v-if="brewingModeStats.length" class="brew-mode-legend">
+                      <span
+                        v-for="item in brewingModeStats"
+                        :key="`${item.key}-legend`"
+                        class="brew-mode-legend-item"
+                      >
+                        <span class="brew-mode-dot" :style="{ background: item.color }" />
+                        <span>{{ item.label }}</span>
+                        <strong>{{ item.percent }}%</strong>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="brew-metric-grid brewing-metric-grid-hero">
+                    <article class="mini-card">
+                      <span class="mini-label">Температура</span>
+                      <strong>{{ avgWaterTemp ? `${avgWaterTemp.toFixed(0)}°C` : '—' }}</strong>
+                      <span class="mini-meta">средняя температура воды</span>
+                    </article>
+                    <article class="mini-card">
+                      <span class="mini-label">Навеска</span>
+                      <strong>{{ avgLeafGrams ? `${avgLeafGrams.toFixed(1)} г` : '—' }}</strong>
+                      <span class="mini-meta">сколько листа обычно берёшь</span>
+                    </article>
+                    <article class="mini-card">
+                      <span class="mini-label">Объём</span>
+                      <strong>{{ avgWaterVolume ? `${avgWaterVolume.toFixed(0)} мл` : '—' }}</strong>
+                      <span class="mini-meta">средний объём воды в сессии</span>
+                    </article>
+                    <article class="mini-card">
+                      <span class="mini-label">Проливы</span>
+                      <strong>{{ avgInfusions ? avgInfusions.toFixed(1) : '—' }}</strong>
+                      <span class="mini-meta">среднее число проливов</span>
+                    </article>
+                    <article class="mini-card">
+                      <span class="mini-label">Промывка</span>
+                      <strong>{{ avgRinseCount ? avgRinseCount.toFixed(1) : '—' }}</strong>
+                      <span class="mini-meta">среднее число промывок</span>
+                    </article>
+                    <article class="mini-card">
+                      <span class="mini-label">Сетап указан</span>
+                      <strong>{{ setupCoverage }}%</strong>
+                      <span class="mini-meta">заметок с выбранной посудой</span>
+                    </article>
+                  </div>
                 </div>
-                <div v-if="brewingModeStats.length" class="brew-mode-card-grid">
-                  <article v-for="item in brewingModeStats" :key="item.key" class="brew-mode-card">
-                    <span class="brew-mode-dot" :style="{ background: item.color }" />
-                    <span class="brew-mode-label">{{ item.label }}</span>
-                    <strong>{{ item.percent }}%</strong>
-                    <span class="brew-mode-meta">{{ item.count }} сессий</span>
-                  </article>
-                </div>
-                <p v-else class="mini-empty">Режимы появятся, когда в выборке будут заметки по завариванию.</p>
               </article>
 
-              <article class="box detail-box">
+              <article class="box brewing-tools-box">
                 <div class="section-head compact">
                   <div>
-                    <h3>Профиль сессии</h3>
-                    <p class="section-copy">Средние ориентиры, которые помогают быстро понять твой привычный способ заваривания.</p>
+                    <h3>Посуда и вода</h3>
+                    <p class="section-copy">Чем обычно собрана сессия: какая посуда и какая вода чаще всего сопровождают твой привычный ритуал.</p>
                   </div>
                 </div>
-                <div class="brew-metric-grid">
-                  <article class="mini-card">
-                    <span class="mini-label">Температура</span>
-                    <strong>{{ avgWaterTemp ? `${avgWaterTemp.toFixed(0)}°C` : '—' }}</strong>
-                    <span class="mini-meta">средняя температура воды</span>
-                  </article>
-                  <article class="mini-card">
-                    <span class="mini-label">Навеска</span>
-                    <strong>{{ avgLeafGrams ? `${avgLeafGrams.toFixed(1)} г` : '—' }}</strong>
-                    <span class="mini-meta">сколько листа обычно берёшь</span>
-                  </article>
-                  <article class="mini-card">
-                    <span class="mini-label">Объём</span>
-                    <strong>{{ avgWaterVolume ? `${avgWaterVolume.toFixed(0)} мл` : '—' }}</strong>
-                    <span class="mini-meta">средний объём воды в сессии</span>
-                  </article>
-                  <article class="mini-card">
-                    <span class="mini-label">Проливы</span>
-                    <strong>{{ avgInfusions ? avgInfusions.toFixed(1) : '—' }}</strong>
-                    <span class="mini-meta">среднее число проливов</span>
-                  </article>
-                </div>
-              </article>
-
-              <article class="box insight-box">
-                <div class="section-head compact">
-                  <div>
-                    <h3>Насколько подробно ты фиксируешь процесс</h3>
-                    <p class="section-copy">Какие технические детали заваривания реально заполняются в заметках.</p>
-                  </div>
-                </div>
-                <ul class="insight-list">
-                  <li>
-                    <span class="insight-label">Сетап указан</span>
-                    <strong>{{ setupCoverage }}%</strong>
-                  </li>
-                  <li>
-                    <span class="insight-label">Тип воды указан</span>
-                    <strong>{{ waterSourceCoverage }}%</strong>
-                  </li>
-                  <li>
-                    <span class="insight-label">Промывка указана</span>
-                    <strong>{{ rinseCoverage }}%</strong>
-                  </li>
-                  <li>
-                    <span class="insight-label">Комментарий к сессии</span>
-                    <strong>{{ brewingMethodCoverage }}%</strong>
-                  </li>
-                </ul>
-              </article>
-
-              <div class="analytics-divider" aria-hidden="true">
-                <span />
-              </div>
-
-              <article class="box brewing-setup-box">
-                <div class="section-head compact">
-                  <div>
-                    <h3>Сетапы</h3>
-                    <p class="section-copy">Какая посуда и какие комплекты чаще всего становятся основой сессии.</p>
-                  </div>
-                </div>
-                <ul v-if="setupStats.length" class="mini-list">
-                  <li v-for="item in setupStats" :key="item.key">
-                    <span>{{ item.label }}</span>
-                    <strong>{{ item.count }}</strong>
-                  </li>
-                </ul>
-                <p v-else class="mini-empty">В текущем срезе сетапы пока не указаны.</p>
-                <div class="brew-metric-grid brew-metric-grid-compact">
-                  <article class="mini-card">
-                    <span class="mini-label">Сетап-лидер</span>
+                <div class="brewing-tools-summary">
+                  <article class="mini-card brewing-tools-summary-card">
+                    <span class="mini-label">Частый сетап</span>
                     <strong>{{ topSetup }}</strong>
-                    <span class="mini-meta">самый частый комплект посуды</span>
+                    <span class="mini-meta">основа привычной сессии</span>
                   </article>
-                  <article class="mini-card">
-                    <span class="mini-label">Сетап указан</span>
-                    <strong>{{ setupCoverage }}%</strong>
-                    <span class="mini-meta">заметок с выбранной посудой</span>
+                  <article class="mini-card brewing-tools-summary-card">
+                    <span class="mini-label">Частая вода</span>
+                    <strong>{{ topWaterSource }}</strong>
+                    <span class="mini-meta">самый частый выбор воды</span>
                   </article>
+                </div>
+                <div class="brewing-tools-layout">
+                  <div class="brewing-tools-column">
+                    <h4>Сетапы</h4>
+                    <ul v-if="setupStats.length" class="mini-list">
+                      <li v-for="item in setupStats" :key="item.key">
+                        <span>{{ item.label }}</span>
+                        <strong>{{ item.count }}</strong>
+                      </li>
+                    </ul>
+                    <p v-else class="mini-empty">В текущем срезе сетапы пока не указаны.</p>
+                  </div>
+                  <div class="brewing-tools-column">
+                    <h4>Вода</h4>
+                    <ul v-if="waterSourceStats.length" class="mini-list">
+                      <li v-for="item in waterSourceStats" :key="item.key">
+                        <span>{{ item.label }}</span>
+                        <strong>{{ item.count }}</strong>
+                      </li>
+                    </ul>
+                    <p v-else class="mini-empty">Для этих заметок нет данных о воде.</p>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section
+            id="analytics-cup"
+            v-if="activeSection === 'cup'"
+            class="criteria-block cup-section"
+          >
+            <div class="criteria-head">
+              <h3>Профиль чашки и итоговая оценка</h3>
+              <p>Раздел показывает, как обычно выглядит и ощущается чашка в текущей выборке: оттенок настоя, текстура, состояние и общий уровень впечатления.</p>
+            </div>
+            <div class="analytics-grid cup-grid">
+              <article class="box cup-portrait-box">
+                <div class="section-head compact">
+                  <div>
+                    <h3>Портрет чашки</h3>
+                    <p class="section-copy">Один быстрый визуальный срез по главному оттенку, телу, состоянию и средним оценкам.</p>
+                  </div>
+                </div>
+                <div class="cup-portrait-layout">
+                  <div class="cup-main-column">
+                    <div class="cup-hero">
+                      <div class="cup-hero-swatch" :style="{ background: topLiquorColorSwatch }" aria-hidden="true" />
+                      <div class="cup-hero-copy">
+                        <span class="cup-hero-kicker">Доминирующий образ</span>
+                        <strong>{{ cupPortraitCopy }}</strong>
+                        <span class="cup-hero-meta">Средняя итоговая: {{ averageCupRating ? `${averageCupRating.toFixed(1)}/5` : '—' }}</span>
+                      </div>
+                    </div>
+                    <div class="cup-rating-bars">
+                      <article v-for="item in ratingSummaryCards" :key="item.key" class="cup-rating-bar">
+                        <div class="cup-rating-head">
+                          <span>{{ item.title }}</span>
+                          <strong>{{ item.average ? `${item.average.toFixed(1)}/5` : '—' }}</strong>
+                        </div>
+                        <div class="cup-rating-track" aria-hidden="true">
+                          <span class="cup-rating-fill" :style="{ width: `${item.percent}%` }" />
+                        </div>
+                      </article>
+                    </div>
+                  </div>
+                  <div class="cup-side-column">
+                    <div class="cup-highlight-grid">
+                      <article class="mini-card cup-highlight-card">
+                        <span class="mini-label">Оттенок настоя</span>
+                        <strong>{{ topLiquorColor }}</strong>
+                        <span class="mini-meta">самый частый цвет чашки</span>
+                      </article>
+                      <article class="mini-card cup-highlight-card">
+                        <span class="mini-label">Текстура</span>
+                        <strong>{{ topMouthfeel }}</strong>
+                        <span class="mini-meta">главное телесное ощущение</span>
+                      </article>
+                      <article class="mini-card cup-highlight-card">
+                        <span class="mini-label">Состояние</span>
+                        <strong>{{ topEnergyEffect }}</strong>
+                        <span class="mini-meta">самый частый эффект после сессии</span>
+                      </article>
+                    </div>
+                  </div>
                 </div>
               </article>
 
-              <article class="box brewing-water-box">
-                <div class="section-head compact">
-                  <div>
-                    <h3>Вода и техника</h3>
-                    <p class="section-copy">Какую воду ты выбираешь и насколько подробно фиксируешь тонкие параметры сессии.</p>
-                  </div>
-                </div>
-                <ul v-if="waterSourceStats.length" class="mini-list">
-                  <li v-for="item in waterSourceStats" :key="item.key">
-                    <span>{{ item.label }}</span>
-                    <strong>{{ item.count }}</strong>
-                  </li>
-                </ul>
-                <p v-else class="mini-empty">Для этих заметок нет данных о воде.</p>
-                <div class="brew-metric-grid brew-metric-grid-compact">
-                  <article class="mini-card">
-                    <span class="mini-label">Вода-лидер</span>
-                    <strong>{{ topWaterSource }}</strong>
-                    <span class="mini-meta">самый частый тип воды</span>
-                  </article>
-                  <article class="mini-card">
-                    <span class="mini-label">Промывка</span>
-                    <strong>{{ avgRinseCount ? avgRinseCount.toFixed(1) : '—' }}</strong>
-                    <span class="mini-meta">среднее число промывок</span>
-                  </article>
-                </div>
-              </article>
             </div>
           </section>
 
@@ -1045,39 +1484,38 @@ function openFilteredNotes() {
                 </div>
               </article>
 
-              <article class="box region-descriptor-box profile-tea-leaf-box">
-                <div class="section-head compact">
-                  <div>
-                    <h3>Точные ноты × тип чая</h3>
-                    <p class="section-copy">Для основных типов в срезе — какие конкретные ноты всплывают чаще всего.</p>
-                  </div>
+            </div>
+          </section>
+
+          <section
+            id="analytics-relations"
+            v-if="activeSection === 'relations'"
+            class="criteria-block relations-section"
+          >
+            <div class="criteria-head">
+              <h3>Наблюдения</h3>
+              <p>Раздел подмечает неочевидные паттерны внутри текущей выборки: что с чем у тебя чаще всего связано и какие сочетания повторяются.</p>
+            </div>
+            <div v-if="analyticsInsights.length" class="analytics-grid insights-grid">
+              <article
+                v-for="item in analyticsInsights"
+                :key="item.key"
+                class="box insight-story-card"
+                :class="item.accent ? `insight-story-card--${item.accent}` : ''"
+              >
+                <div class="insight-story-head">
+                  <span class="insight-story-label">{{ item.title }}</span>
+                  <span v-if="item.context" class="insight-story-context">{{ item.context }}</span>
                 </div>
-                <div v-if="exactDescriptorTeaTypeProfiles.some((row) => row.topLeaves.length)" class="region-descriptor-grid">
-                  <article
-                    v-for="item in exactDescriptorTeaTypeProfiles"
-                    :key="item.teaType"
-                    class="region-descriptor-card"
-                  >
-                    <div class="region-descriptor-head">
-                      <strong>{{ item.teaType }}</strong>
-                      <span>{{ item.coverage }}% с точными нотами</span>
-                    </div>
-                    <div v-if="item.topLeaves.length" class="descriptor-pill-list">
-                      <span
-                        v-for="leaf in item.topLeaves"
-                        :key="`${item.teaType}-${leaf.id}`"
-                        class="descriptor-pill"
-                        :title="leaf.fullLabel"
-                      >
-                        <span class="descriptor-dot" :style="{ background: leaf.color }" />
-                        <span>{{ leaf.label }}</span>
-                      </span>
-                    </div>
-                    <p v-else class="mini-empty">Пока нет точных нот для этого типа в срезе.</p>
-                  </article>
-                </div>
-                <p v-else class="mini-empty">Блок заполнится, когда появятся типы чая с выбранными точными дескрипторами.</p>
+                <strong class="insight-story-lead">{{ item.lead }}</strong>
+                <p class="insight-story-detail">{{ item.detail }}</p>
               </article>
+            </div>
+            <p v-else class="mini-empty">
+              Когда в выборке станет больше повторяющихся паттернов по посуде, регионам, типам чая и состояниям, здесь появятся персональные наблюдения.
+            </p>
+            <div v-if="analyticsInsights.length" class="insight-footnote">
+              Наблюдения строятся только внутри текущего среза, поэтому фильтры сверху помогают смотреть на паттерны в нужном контексте, а не мешают им.
             </div>
           </section>
         </div>
@@ -1093,7 +1531,7 @@ function openFilteredNotes() {
 h2 { margin: 0 0 6px; }
 .lead { margin: 0; color: #4d6651; max-width: 760px; line-height: 1.55; }
 .filters { border: 1px solid #e3eee0; border-radius: 12px; padding: 14px; background: #fbfdf8; display: grid; gap: 12px; margin-bottom: 14px; }
-.filter-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.filter-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
 .filter-field { display: grid; gap: 6px; color: #4b6350; font-size: 13px; }
 .filter-field span { font-weight: 700; color: #49654f; }
 .filter-field select { border: 1px solid #cedec9; border-radius: 10px; padding: 10px 12px; background: #fff; font-size: 14px; }
@@ -1126,20 +1564,34 @@ h2 { margin: 0 0 6px; }
   color: #173a20;
 }
 .geography-section .stat-box,
-.geography-section .box {
+.geography-section .box,
+.relations-section .stat-box,
+.relations-section .box,
+.cup-section .stat-box,
+.cup-section .box {
   background: linear-gradient(180deg, #fbfdf8 0%, #f7fbf4 100%);
 }
 .geography-section .stat-value,
 .geography-section .section-head h3,
-.geography-section .insight-list strong {
+.geography-section .insight-list strong,
+.relations-section .section-head h3,
+.relations-section .insight-list strong,
+.cup-section .section-head h3,
+.cup-section .insight-list strong {
   color: #173a20;
 }
 .geography-section .section-copy,
 .geography-section .stat-label,
-.geography-section .insight-label {
+.geography-section .insight-label,
+.relations-section .section-copy,
+.relations-section .stat-label,
+.relations-section .insight-label,
+.cup-section .section-copy,
+.cup-section .insight-label {
   color: #5d7460;
 }
-.geography-section {
+.geography-section,
+.relations-section {
   min-width: 0;
 }
 .brewing-section .stat-box,
@@ -1245,6 +1697,97 @@ h2 { margin: 0 0 6px; }
 .analytics-main { display: grid; gap: 14px; }
 .analytics-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .box { border: 1px solid #e3eee0; border-radius: 12px; padding: 14px; background: #fbfdf8; }
+.cup-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.cup-portrait-box {
+  grid-column: 1 / -1;
+}
+.cup-portrait-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+  gap: 12px;
+  align-items: start;
+}
+.cup-main-column,
+.cup-side-column {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+.cup-hero {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(244, 248, 241, 0.96));
+  border: 1px solid #e2ece0;
+}
+.cup-hero-swatch {
+  width: 120px;
+  height: 120px;
+  border-radius: 24px;
+  box-shadow: inset 0 0 0 1px rgba(69, 86, 54, 0.08);
+}
+.cup-hero-copy {
+  display: grid;
+  gap: 8px;
+}
+.cup-hero-kicker {
+  color: #6d846f;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.cup-hero-copy strong {
+  color: #173a20;
+  font-size: 22px;
+  line-height: 1.35;
+}
+.cup-hero-meta {
+  color: #5d7460;
+  font-size: 13px;
+}
+.cup-highlight-grid {
+  display: grid;
+  gap: 10px;
+}
+.cup-highlight-card {
+  min-height: 84px;
+}
+.cup-rating-bars {
+  display: grid;
+  gap: 10px;
+}
+.cup-rating-bar {
+  display: grid;
+  gap: 6px;
+}
+.cup-rating-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #4c6750;
+  font-size: 13px;
+}
+.cup-rating-head strong {
+  color: #204f2b;
+}
+.cup-rating-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #e6efe3;
+  overflow: hidden;
+}
+.cup-rating-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #83b65d 0%, #2f7b3d 100%);
+}
 .empty { color: #4b6350; border: 1px dashed #c6dcc3; border-radius: 12px; padding: 16px; background: #fbfdf8; }
 .section-head { display: flex; justify-content: space-between; align-items: start; gap: 12px; margin-bottom: 10px; }
 .section-head.compact { margin-bottom: 12px; }
@@ -1256,7 +1799,37 @@ h2 { margin: 0 0 6px; }
 .geography-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+.relations-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.insights-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 .map-box { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+.map-mode-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #eef6eb;
+  border: 1px solid #dbe9d6;
+}
+.map-mode-btn {
+  border: 0;
+  background: transparent;
+  color: #56705c;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.map-mode-btn.active {
+  background: #2f7b3d;
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(47, 123, 61, 0.18);
+}
 .geography-map,
 .geography-top-box { width: auto; max-width: none; min-width: 0; margin: 0; grid-column: 1 / -1; }
 .geography-section .box,
@@ -1279,6 +1852,98 @@ h2 { margin: 0 0 6px; }
 .region-rating-notes { color: #617b65; font-size: 12px; }
 .region-rating-meta { display: inline-grid; justify-items: end; gap: 2px; min-width: 76px; }
 .region-rating-meta strong { color: #204f2b; }
+.country-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #f2f8ef;
+  border: 1px solid #deead8;
+  color: #204f2b;
+  line-height: 1.1;
+}
+.country-badge-inline {
+  padding: 3px 8px;
+}
+.country-badge-subtle {
+  background: #fff;
+  border-color: #e3eee0;
+}
+.country-flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: inset 0 0 0 1px rgba(87, 112, 92, 0.08);
+  font-size: 13px;
+  flex: 0 0 18px;
+}
+.insight-story-card {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-height: 180px;
+  position: relative;
+  overflow: hidden;
+}
+.insight-story-card::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 12px 0 0 12px;
+  background: #a8c5a7;
+}
+.insight-story-card--country::after { background: #5f9bcf; }
+.insight-story-card--region::after { background: #6eb0a0; }
+.insight-story-card--teaType::after { background: #d88963; }
+.insight-story-card--setup::after { background: #91816f; }
+.insight-story-card--energy::after { background: #8c7ad8; }
+.insight-story-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+.insight-story-label {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #eef6eb;
+  border: 1px solid #dbe9d6;
+  color: #466049;
+  font-size: 12px;
+  font-weight: 700;
+}
+.insight-story-context {
+  color: #6a816d;
+  font-size: 12px;
+  text-align: right;
+}
+.insight-story-lead {
+  color: #173a20;
+  font-size: 17px;
+  line-height: 1.4;
+}
+.insight-story-detail {
+  margin: 0;
+  color: #5d7460;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.insight-footnote {
+  color: #6a816d;
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 0 2px;
+}
 .analytics-divider {
   grid-column: 1 / -1;
   display: flex;
@@ -1303,6 +1968,19 @@ h2 { margin: 0 0 6px; }
   border-radius: 999px;
   background: #a8c5a7;
   box-shadow: 0 0 0 4px #f7fbf4;
+}
+.analytics-divider-labeled span {
+  width: auto;
+  height: auto;
+  border-radius: 999px;
+  background: #eef6eb;
+  box-shadow: none;
+  border: 1px solid #d7e5d2;
+  color: #466049;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
 }
 .region-descriptor-box {
   grid-column: 1 / -1;
@@ -1354,41 +2032,111 @@ h2 { margin: 0 0 6px; }
 .brew-mode-strip-segment {
   height: 100%;
 }
-.brew-mode-card-grid,
 .brew-metric-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
-.brew-mode-card {
+.brewing-portrait-box {
+  grid-column: 1 / -1;
+}
+.brewing-portrait-layout {
   display: grid;
-  gap: 6px;
-  padding: 12px;
-  border-radius: 12px;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 12px;
+  align-items: start;
+}
+.brewing-portrait-copy {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #e2ece0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(244, 248, 241, 0.96));
+}
+.brewing-portrait-copy strong {
+  color: #173a20;
+  font-size: 22px;
+  line-height: 1.35;
+}
+.brewing-summary-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.brewing-summary-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 999px;
   background: #fff;
-  border: 1px solid #e6efe3;
+  border: 1px solid #e1ebe0;
+  color: #34543c;
+  font-size: 13px;
+}
+.brew-mode-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.brew-mode-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid #e1ebe0;
+  color: #3f5f47;
+  font-size: 12px;
+}
+.brew-mode-legend-item strong {
+  color: #1d4b27;
+  font-size: 12px;
+}
+.brewing-metric-grid-hero {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .brew-mode-dot {
   width: 10px;
   height: 10px;
   border-radius: 999px;
 }
-.brew-mode-label {
-  color: #3b5d43;
-  font-size: 13px;
-}
-.brew-mode-card strong {
-  color: #1d4b27;
-  font-size: 22px;
-  line-height: 1;
-}
-.brew-mode-meta {
-  color: #617b65;
-  font-size: 12px;
-}
 .brew-metric-grid-compact {
   margin-top: 12px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.brewing-tools-box {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
+}
+.brewing-tools-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.brewing-tools-summary-card {
+  min-height: 92px;
+}
+.brewing-tools-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.brewing-tools-column {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid #e5efe2;
+}
+.brewing-tools-column h4 {
+  margin: 0;
+  color: #173a20;
+  font-size: 14px;
 }
 .region-descriptor-grid {
   display: grid;
@@ -1409,9 +2157,17 @@ h2 { margin: 0 0 6px; }
   align-items: start;
   gap: 10px;
 }
+.region-descriptor-title {
+  display: grid;
+  gap: 2px;
+}
 .region-descriptor-head strong {
   color: #1b4926;
   font-size: 16px;
+}
+.region-descriptor-country {
+  color: #617b65;
+  font-size: 12px;
 }
 .region-descriptor-head span {
   color: #617b65;
@@ -1507,7 +2263,6 @@ h2 { margin: 0 0 6px; }
   .brewing-grid,
   .region-rating-group,
   .region-descriptor-grid,
-  .brew-mode-card-grid,
   .brew-metric-grid,
   .profile-grid,
   .stats, .overview-grid, .analytics-grid { grid-template-columns: 1fr; }
@@ -1515,6 +2270,12 @@ h2 { margin: 0 0 6px; }
   .passport-origin-layout,
   .passport-source-layout,
   .detail-columns { grid-template-columns: 1fr; }
+  .brewing-portrait-layout,
+  .brewing-tools-layout,
+  .brewing-tools-summary { grid-template-columns: 1fr; }
+  .cup-portrait-layout,
+  .cup-hero { grid-template-columns: 1fr; }
+  .cup-hero-swatch { width: 100%; max-width: 160px; height: 120px; }
   .province-top-grid { grid-template-columns: 1fr; }
 }
 </style>

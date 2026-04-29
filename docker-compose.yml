@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: notea-postgres
+    environment:
+      POSTGRES_DB: notea
+      POSTGRES_USER: notea
+      POSTGRES_PASSWORD: notea
+    ports:
+      - "5432:5432"
+    volumes:
+      - notea-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notea -d notea"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  auth:
+    build:
+      context: .
+      dockerfile: Dockerfile.auth
+    container_name: notea-auth
+    environment:
+      DATABASE_URL: postgres://notea:notea@postgres:5432/notea?sslmode=disable
+      JWT_SECRET: notea-demo-secret
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "9090:9090"
+
+  notes:
+    build:
+      context: .
+      dockerfile: Dockerfile.notes
+    container_name: notea-notes
+    environment:
+      DATABASE_URL: postgres://notea:notea@postgres:5432/notea?sslmode=disable
+      JWT_SECRET: notea-demo-secret
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "9091:9091"
+
+  envoy:
+    image: envoyproxy/envoy:v1.31-latest
+    container_name: notea-envoy
+    depends_on:
+      - auth
+      - notes
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./deployments/envoy.docker.yaml:/etc/envoy/envoy.yaml:ro
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: notea-web
+    environment:
+      VITE_PROXY_TARGET: http://envoy:8080
+    depends_on:
+      - envoy
+    ports:
+      - "5173:5173"
+
+volumes:
+  notea-postgres-data:

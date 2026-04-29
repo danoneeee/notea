@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package auth.v1;
 
+import "google/protobuf/timestamp.proto";
+
 option go_package = "notea/api/proto/auth/v1;authv1";
 
 service AuthService {
@@ -15,6 +17,7 @@ message User {
     string id = 1;
     string email = 2;
     string display_name = 3;
+    google.protobuf.Timestamp created_at = 4;
 }
 
 message RegisterRequest {

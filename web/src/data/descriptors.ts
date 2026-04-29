@@ -1,3 +1,8 @@
+import { createPromiseClient } from '@bufbuild/connect';
+import { ListDescriptorCategoriesRequest } from '../generated/teanotes/v1/tea_notes_pb';
+import { TeaNotesService } from '../generated/teanotes/v1/tea_notes_connect';
+import { apiTransport } from '../services/apiTransport';
+
 export type DescriptorNote = {
   id: string;
   label: string;
@@ -16,7 +21,7 @@ export type DescriptorFamily = {
   groups: DescriptorGroup[];
 };
 
-export const descriptorFamilies: DescriptorFamily[] = [
+const fallbackDescriptorFamilies: DescriptorFamily[] = [
   {
     id: 'floral',
     label: 'Цветы',
@@ -389,11 +394,61 @@ export const descriptorFamilies: DescriptorFamily[] = [
   },
 ];
 
-export const descriptorWheelFamilies = descriptorFamilies.map(({ id, label, color }) => ({
+const client = createPromiseClient(TeaNotesService, apiTransport);
+
+export let descriptorFamilies: DescriptorFamily[] = fallbackDescriptorFamilies;
+export let descriptorWheelFamilies = descriptorFamilies.map(({ id, label, color }) => ({
   id,
   label,
   color,
 }));
+
+function rebuildDescriptorWheelFamilies() {
+  descriptorWheelFamilies = descriptorFamilies.map(({ id, label, color }) => ({
+    id,
+    label,
+    color,
+  }));
+}
+
+function normalizeDescriptorFamilies(categories: {
+  id: string;
+  name: string;
+  colorHex: string;
+  segments: { id: string; name: string; descriptors: { id: string; name: string }[] }[];
+}[]): DescriptorFamily[] {
+  return categories
+    .map((category) => ({
+      id: category.id,
+      label: category.name,
+      color: category.colorHex || '#d9e5d6',
+      groups: (category.segments ?? [])
+        .map((segment) => ({
+          id: segment.id,
+          label: segment.name,
+          notes: (segment.descriptors ?? []).map((descriptor) => ({
+            id: descriptor.id,
+            label: descriptor.name,
+          })),
+        }))
+        .filter((segment) => segment.id && segment.label && segment.notes.length > 0),
+    }))
+    .filter((category) => category.id && category.label && category.groups.length > 0);
+}
+
+export async function loadDescriptorFamiliesFromRemote() {
+  try {
+    const response = await client.listDescriptorCategories(new ListDescriptorCategoriesRequest());
+    const next = normalizeDescriptorFamilies(response.categories ?? []);
+    if (next.length > 0) {
+      descriptorFamilies = next;
+      rebuildDescriptorWheelFamilies();
+    }
+  } catch {
+    descriptorFamilies = fallbackDescriptorFamilies;
+    rebuildDescriptorWheelFamilies();
+  }
+}
 
 export function getDescriptorFamilyById(id: string) {
   return descriptorFamilies.find((family) => family.id === id) ?? null;

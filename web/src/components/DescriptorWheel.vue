@@ -136,6 +136,7 @@ const previewSegment = computed(() => {
   };
 });
 
+
 const wheelScale = computed(() => {
   const level = Math.min(2, Math.max(0, props.zoomLevel ?? 0));
   return 1 + level * 0.1;
@@ -166,6 +167,7 @@ const segmentRenderKey = computed(() => props.descriptors.map((segment) => segme
           @mouseenter="setHovered(segment.id)"
           @mouseleave="setHovered(null)"
         >
+          <title>{{ segment.label }}</title>
           <path
             class="segment"
             :class="{

@@ -36,7 +36,8 @@ import {
   waterSourceOptions,
 } from '../services/noteForm';
 import { noteColorOptions } from '../services/noteColors';
-import { listSetups, type TeaSetup } from '../services/setups';
+import { normalizeTeaOrigin } from '../services/originNormalization';
+import { hydrateSetupsFromRemote, listSetups, type TeaSetup } from '../services/setups';
 
 const route = useRoute();
 const router = useRouter();
@@ -56,6 +57,7 @@ const country = ref('');
 const originRegion = ref('');
 const harvestSeason = ref('');
 const harvestYear = ref<number | null>(null);
+const passportNotes = ref('');
 
 const brewingMode = ref<'gongfu' | 'steep' | 'coldbrew'>('gongfu');
 const brewingMethod = ref('');
@@ -73,7 +75,8 @@ const mouthfeel = ref('');
 const energyEffect = ref('');
 const noteColor = ref('');
 const isFavorite = ref(false);
-const freeText = ref('');
+const cupProfileNotes = ref('');
+const createdAt = ref('');
 
 const setups = ref<TeaSetup[]>([]);
 const ratings = ref({
@@ -91,7 +94,7 @@ const basicFields = {
   originRegion,
   harvestSeason,
   harvestYear,
-  notes: freeText,
+  passportNotes,
 };
 
 const brewFields = {
@@ -115,7 +118,7 @@ const finishFields = {
   ratings,
   noteColor,
   isFavorite,
-  freeText,
+  cupProfileNotes,
 };
 
 const showExtraBasics = ref(false);
@@ -234,7 +237,7 @@ const basicOptionalInvalidFields = computed(() => {
     originRegion: !skippedBasics.value.originRegion && !isKnownRegionForCountry(country.value, originRegion.value),
     harvestSeason: !skippedBasics.value.harvestSeason && !harvestSeason.value.trim(),
     harvestYear: !skippedBasics.value.harvestYear && harvestYear.value === null,
-    notes: !skippedBasics.value.notes && !freeText.value.trim(),
+    notes: !skippedBasics.value.notes && !passportNotes.value.trim(),
   };
 });
 const brewInvalidFields = computed(() => {
@@ -295,7 +298,7 @@ const stepIntroCopy = computed(() => {
   if (step.value === 3) {
     return 'Сначала выбери большое семейство, потом сузь поиск до подгруппы, а затем раскрой круг ещё сильнее, чтобы поймать точную ноту.';
   }
-  return 'Сначала поставь обязательные оценки по звёздам, а затем при желании добавь свободное впечатление и дополнительные ощущения чашки.';
+  return 'Сначала поставь обязательные оценки по звёздам, а затем добавь отдельную заметку к профилю чашки и финальным ощущениям.';
 });
 
 const timeLabel = computed(() => {
@@ -318,14 +321,16 @@ const timeMax = computed(() => {
 });
 
 function applyNoteRecord(note: NoteRecord) {
+  const normalizedOrigin = normalizeTeaOrigin(note.country, note.originRegion, note.region);
   draftNoteId.value = note.id || crypto.randomUUID();
   sessionTitle.value = note.sessionTitle ?? '';
   teaName.value = note.teaName ?? '';
   teaType.value = note.teaType ?? '';
-  country.value = note.region ?? '';
-  originRegion.value = '';
+  country.value = normalizedOrigin.country;
+  originRegion.value = normalizedOrigin.originRegion;
   harvestSeason.value = note.harvestSeason ?? '';
   harvestYear.value = note.harvestYear ?? null;
+  passportNotes.value = note.passportNotes ?? '';
   brewingMode.value = note.brewingMode ?? 'gongfu';
   brewingMethod.value = note.brewingMethod ?? '';
   waterSource.value = note.waterSource ?? '';
@@ -341,7 +346,8 @@ function applyNoteRecord(note: NoteRecord) {
   energyEffect.value = note.energyEffect ?? '';
   noteColor.value = note.noteColor ?? '';
   isFavorite.value = note.isFavorite ?? false;
-  freeText.value = note.freeText ?? '';
+  cupProfileNotes.value = note.cupProfileNotes ?? note.freeText ?? '';
+  createdAt.value = note.createdAt ?? note.updatedAt ?? '';
   selectedDescriptorIds.value = [...(note.descriptors ?? [])];
   ratings.value = {
     aroma: note.ratings.aroma ?? 0,
@@ -355,23 +361,24 @@ function applyNoteRecord(note: NoteRecord) {
   for (const key of Object.keys(skippedBrew.value) as OptionalBrewField[]) {
     skippedBrew.value[key] = Boolean(note.skippedFields?.includes(key));
   }
-  showExtraBasics.value = skippedBasicFields.value.length > 0 || Boolean(country.value || originRegion.value || harvestSeason.value || harvestYear.value || freeText.value);
+  showExtraBasics.value = skippedBasicFields.value.length > 0 || Boolean(country.value || originRegion.value || harvestSeason.value || harvestYear.value || passportNotes.value);
   showExtraBrew.value = skippedBrewFields.value.length > 0 || Boolean(waterSource.value || rinseCount.value !== null || infusionsCount.value !== null || brewingMethod.value);
 }
 
 function buildPayload(): NoteRecord {
+  const normalizedOrigin = normalizeTeaOrigin(country.value, originRegion.value);
+  const now = new Date().toISOString();
   return {
     id: draftNoteId.value,
     sessionTitle: sessionTitle.value,
     teaName: teaName.value,
     teaType: teaType.value,
-    region: originRegion.value || country.value,
-    originDetail: '',
-    cultivar: '',
-    source: '',
-    processingStyle: '',
+    country: normalizedOrigin.country,
+    originRegion: normalizedOrigin.originRegion,
+    region: normalizedOrigin.region,
     harvestSeason: harvestSeason.value,
     harvestYear: harvestYear.value,
+    passportNotes: passportNotes.value,
     skippedFields: skippedFields.value,
     brewingMode: brewingMode.value,
     brewingMethod: brewingMethod.value,
@@ -391,9 +398,11 @@ function buildPayload(): NoteRecord {
     energyEffect: energyEffect.value,
     noteColor: noteColor.value,
     isFavorite: isFavorite.value,
-    freeText: freeText.value,
+    cupProfileNotes: cupProfileNotes.value,
+    freeText: cupProfileNotes.value,
     ratings: { ...ratings.value },
-    updatedAt: new Date().toISOString(),
+    createdAt: createdAt.value || now,
+    updatedAt: now,
   };
 }
 
@@ -423,7 +432,7 @@ function getOptionalStepValidationError(targetStep = step.value) {
       (!skippedBasics.value.originRegion && !isKnownRegionForCountry(country.value, originRegion.value)) ||
       (!skippedBasics.value.harvestSeason && !harvestSeason.value.trim()) ||
       (!skippedBasics.value.harvestYear && harvestYear.value === null) ||
-      (!skippedBasics.value.notes && !freeText.value.trim());
+      (!skippedBasics.value.notes && !passportNotes.value.trim());
     if (hasUnfilledOptionalBasics) {
       return 'Заполни раскрытые опциональные поля или отметь их как «Не указываю».';
     }
@@ -442,6 +451,11 @@ function getOptionalStepValidationError(targetStep = step.value) {
 
 onMounted(async () => {
   setups.value = listSetups();
+  try {
+    setups.value = await hydrateSetupsFromRemote();
+  } catch {
+    setups.value = listSetups();
+  }
   if (isEditing.value) {
     const note = await ensureNoteAvailable(editingNoteId.value);
     if (note) {
@@ -502,7 +516,7 @@ function clearOptionalBasicValue(field: OptionalBasicField) {
   if (field === 'originRegion') originRegion.value = '';
   if (field === 'harvestSeason') harvestSeason.value = '';
   if (field === 'harvestYear') harvestYear.value = null;
-  if (field === 'notes') freeText.value = '';
+  if (field === 'notes') passportNotes.value = '';
 }
 
 function setBasicFieldSkipped(field: OptionalBasicField, skipped: boolean) {

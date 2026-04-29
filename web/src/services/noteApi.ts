@@ -1,4 +1,4 @@
-import { createPromiseClient } from '@bufbuild/connect';
+import { Code, ConnectError, createPromiseClient } from '@bufbuild/connect';
 import { Timestamp } from '@bufbuild/protobuf';
 import {
   DeleteTeaNoteRequest,
@@ -11,10 +11,12 @@ import {
 import { TeaNotesService } from '../generated/teanotes/v1/tea_notes_connect';
 import { apiTransport } from './apiTransport';
 import type { NoteRecord } from './notes';
+import { normalizeTeaOrigin } from './originNormalization';
 
 const client = createPromiseClient(TeaNotesService, apiTransport);
 
 export function noteRecordToTeaNote(record: NoteRecord): TeaNote {
+  const normalizedOrigin = normalizeTeaOrigin(record.country, record.originRegion, record.region);
   const ratings = new NoteRatingsMsg({
     aroma: record.ratings.aroma,
     taste: record.ratings.taste,
@@ -22,21 +24,26 @@ export function noteRecordToTeaNote(record: NoteRecord): TeaNote {
     balance: record.ratings.balance,
   });
   const updatedAt = Timestamp.fromDate(new Date(record.updatedAt));
+  const createdAt = Timestamp.fromDate(new Date(record.createdAt || record.updatedAt));
   const harvestYear =
     record.harvestYear === null || record.harvestYear === undefined ? undefined : Number(record.harvestYear);
   return new TeaNote({
     id: record.id,
     noteColor: record.noteColor || undefined,
+    isFavorite: Boolean(record.isFavorite),
     sessionTitle: record.sessionTitle || undefined,
     teaName: record.teaName,
     teaType: record.teaType,
-    region: record.region,
-    originDetail: record.originDetail || undefined,
-    cultivar: record.cultivar || undefined,
-    source: record.source || undefined,
-    processingStyle: record.processingStyle || undefined,
+    country: normalizedOrigin.country || undefined,
+    region: normalizedOrigin.originRegion || normalizedOrigin.region || '',
+    // legacy поля больше не заполняются текущей формой
+    originDetail: undefined,
+    cultivar: undefined,
+    source: undefined,
+    processingStyle: undefined,
     harvestSeason: record.harvestSeason || undefined,
     harvestYear,
+    passportNotes: record.passportNotes || undefined,
     skippedFields: record.skippedFields ?? [],
     brewingMode: record.brewingMode,
     brewingMethod: record.brewingMethod,
@@ -54,27 +61,30 @@ export function noteRecordToTeaNote(record: NoteRecord): TeaNote {
     liquorColor: record.liquorColor || undefined,
     mouthfeel: record.mouthfeel || undefined,
     energyEffect: record.energyEffect || undefined,
+    cupProfileNotes: record.cupProfileNotes || undefined,
     freeText: record.freeText,
     ratings,
+    createdAt,
     updatedAt,
   });
 }
 
 export function teaNoteToRecord(note: TeaNote): NoteRecord {
   const r = note.ratings;
+  const normalizedOrigin = normalizeTeaOrigin(note.country, note.region, note.region);
   return {
     id: note.id,
     noteColor: note.noteColor,
+    isFavorite: note.isFavorite,
     sessionTitle: note.sessionTitle,
     teaName: note.teaName,
     teaType: note.teaType,
-    region: note.region,
-    originDetail: note.originDetail,
-    cultivar: note.cultivar,
-    source: note.source,
-    processingStyle: note.processingStyle,
+    country: normalizedOrigin.country,
+    originRegion: normalizedOrigin.originRegion,
+    region: normalizedOrigin.region,
     harvestSeason: note.harvestSeason,
     harvestYear: note.harvestYear === undefined ? null : note.harvestYear,
+    passportNotes: note.passportNotes ?? '',
     skippedFields: note.skippedFields?.length ? [...note.skippedFields] : undefined,
     brewingMode: note.brewingMode as NoteRecord['brewingMode'],
     brewingMethod: note.brewingMethod,
@@ -92,6 +102,7 @@ export function teaNoteToRecord(note: TeaNote): NoteRecord {
     liquorColor: note.liquorColor,
     mouthfeel: note.mouthfeel,
     energyEffect: note.energyEffect,
+    cupProfileNotes: note.cupProfileNotes ?? note.freeText,
     freeText: note.freeText,
     ratings: {
       aroma: r?.aroma ?? 0,
@@ -99,6 +110,7 @@ export function teaNoteToRecord(note: TeaNote): NoteRecord {
       aftertaste: r?.aftertaste ?? 0,
       balance: r?.balance ?? 0,
     },
+    createdAt: note.createdAt?.toDate().toISOString() ?? note.updatedAt?.toDate().toISOString() ?? new Date().toISOString(),
     updatedAt: note.updatedAt?.toDate().toISOString() ?? new Date().toISOString(),
   };
 }
@@ -113,11 +125,34 @@ export async function listTeaNotesRemote(limit: number, offset: number): Promise
   return (res.notes ?? []).map(teaNoteToRecord);
 }
 
+export async function listAllTeaNotesRemote(pageSize = 200): Promise<NoteRecord[]> {
+  const records: NoteRecord[] = [];
+  const normalizedPageSize = Math.min(Math.max(pageSize, 1), 500);
+  let offset = 0;
+
+  while (true) {
+    const batch = await listTeaNotesRemote(normalizedPageSize, offset);
+    records.push(...batch);
+    if (batch.length < normalizedPageSize) {
+      return records;
+    }
+    offset += batch.length;
+  }
+}
+
 export async function getTeaNoteRemote(noteId: string): Promise<NoteRecord | null> {
   const res = await client.getTeaNote(new GetTeaNoteRequest({ noteId }));
   return res.note ? teaNoteToRecord(res.note) : null;
 }
 
 export async function deleteTeaNoteRemote(noteId: string): Promise<void> {
-  await client.deleteTeaNote(new DeleteTeaNoteRequest({ noteId }));
+  try {
+    await client.deleteTeaNote(new DeleteTeaNoteRequest({ noteId }));
+  } catch (reason) {
+    const error = ConnectError.from(reason);
+    if (error.code === Code.NotFound) {
+      return;
+    }
+    throw error;
+  }
 }

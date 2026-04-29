@@ -29,16 +29,20 @@ const latestDraft = computed(() => {
 });
 const routeFilters = computed(() => ({
   teaType: String(route.query.teaType ?? '').trim(),
+  country: String(route.query.country ?? '').trim(),
   region: String(route.query.region ?? '').trim(),
   brewingMode: String(route.query.brewingMode ?? '').trim(),
-  source: String(route.query.source ?? '').trim(),
+  harvestSeason: String(route.query.harvestSeason ?? '').trim(),
+  favorite: String(route.query.favorite ?? '').trim(),
 }));
 const filteredNotes = computed(() =>
   notes.value.filter((note) => {
     if (routeFilters.value.teaType && note.teaType !== routeFilters.value.teaType) return false;
+    if (routeFilters.value.country && note.country !== routeFilters.value.country) return false;
     if (routeFilters.value.region && note.region !== routeFilters.value.region) return false;
     if (routeFilters.value.brewingMode && note.brewingMode !== routeFilters.value.brewingMode) return false;
-    if (routeFilters.value.source && (note.source ?? '') !== routeFilters.value.source) return false;
+    if (routeFilters.value.harvestSeason && (note.harvestSeason ?? '') !== routeFilters.value.harvestSeason) return false;
+    if (routeFilters.value.favorite === '1' && !note.isFavorite) return false;
     return true;
   }),
 );
@@ -135,11 +139,16 @@ async function removeNote(noteId: string) {
       </button>
     </article>
 
-    <div v-if="routeFilters.teaType || routeFilters.region || routeFilters.brewingMode || routeFilters.source" class="filters">
+    <div
+      v-if="routeFilters.teaType || routeFilters.country || routeFilters.region || routeFilters.brewingMode || routeFilters.harvestSeason || routeFilters.favorite"
+      class="filters"
+    >
       <span class="filter-chip" v-if="routeFilters.teaType">Тип: {{ routeFilters.teaType }}</span>
+      <span class="filter-chip" v-if="routeFilters.country">Страна: {{ routeFilters.country }}</span>
       <span class="filter-chip" v-if="routeFilters.region">Регион: {{ routeFilters.region }}</span>
       <span class="filter-chip" v-if="routeFilters.brewingMode">Режим: {{ routeFilters.brewingMode }}</span>
-      <span class="filter-chip" v-if="routeFilters.source">Источник: {{ routeFilters.source }}</span>
+      <span class="filter-chip" v-if="routeFilters.harvestSeason">Сезон: {{ routeFilters.harvestSeason }}</span>
+      <span class="filter-chip" v-if="routeFilters.favorite === '1'">Только любимые</span>
       <button class="text-btn" @click="clearFilters">Сбросить фильтр</button>
     </div>
 
@@ -149,7 +158,10 @@ async function removeNote(noteId: string) {
         <button class="note-link" type="button" @click="router.push(`/app/notes/${note.id}`)">
           <div class="note-body">
             <div class="note-main">
-              <strong class="note-title">{{ note.teaName || 'Без названия' }}</strong>
+              <strong class="note-title">
+                <span>{{ note.teaName || 'Без названия' }}</span>
+                <span v-if="note.isFavorite" class="favorite-heart-mark" aria-label="Любимая заметка" title="Любимая заметка">♥</span>
+              </strong>
               <span v-if="note.sessionTitle" class="note-session">{{ note.sessionTitle }}</span>
             </div>
             <div class="note-meta">
@@ -196,7 +208,8 @@ async function removeNote(noteId: string) {
 .note-link { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; align-items: start; text-align: left; border: 0; background: transparent; cursor: pointer; padding: 0; }
 .note-body { min-width: 0; display: grid; gap: 6px; }
 .note-main { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
-.note-title { color: #173a20; font-size: 15px; }
+.note-title { color: #173a20; font-size: 15px; display: inline-flex; align-items: center; gap: 6px; }
+.favorite-heart-mark { color: #c84c72; font-size: 13px; line-height: 1; }
 .note-session, .note-meta { font-size: 13px; color: #5d7460; }
 .note-foot { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
 .note-time { font-size: 12px; color: #6a806e; }

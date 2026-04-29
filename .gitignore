@@ -34,3 +34,9 @@ docs/
 /notes/
 *.notes.txt
 
+# Local/dev artifacts
+/.bin/
+/.cache/
+/web/test-results/
+/worddocs/
+

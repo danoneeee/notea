@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// RPC без JWT: справочники и устаревшие session-* (всё ещё не реализованы).
+// RPC без JWT: только публичные справочники для лендинга и формы.
 var teaNotesPublicMethods = map[string]struct{}{
 	teanotesv1.TeaNotesService_ListTeas_FullMethodName:                 {},
 	teanotesv1.TeaNotesService_ListDescriptorCategories_FullMethodName: {},
@@ -39,7 +39,7 @@ func UnaryAuthInterceptor(jwtSecret string) grpc.UnaryServerInterceptor {
 		if len(raw) > 7 && strings.EqualFold(raw[:7], "bearer ") {
 			raw = strings.TrimSpace(raw[7:])
 		}
-		userID, err := auth.ValidateToken(jwtSecret, raw)
+		userID, err := auth.ValidateTokenUse(jwtSecret, raw, "access")
 		if err != nil {
 			return nil, status.Error(codes.Unauthenticated, "invalid token")
 		}

@@ -12,7 +12,7 @@ defineProps<{
     originRegion: Ref<string>;
     harvestSeason: Ref<string>;
     harvestYear: Ref<number | null>;
-    notes: Ref<string>;
+    passportNotes: Ref<string>;
   };
   skippedBasics: Record<OptionalBasicField, boolean>;
   invalidFields: {
@@ -199,8 +199,12 @@ function toggleOptionalBasicsSection() {
             </button>
           </div>
           <template v-if="!skippedBasics.notes">
-            <p class="field-note">Добавь дополнительные заметки по партии или сессии, если это поможет при следующем заваривании.</p>
-            <textarea v-model="fields.notes.value" rows="3" placeholder="Например, культивар Цин Синь, партия весна 2024, сырьё из сада на высоте 1200 м." />
+            <p class="field-note">Короткая заметка именно к паспорту чая: что важно помнить о партии, происхождении или контексте.</p>
+            <textarea
+              v-model="fields.passportNotes.value"
+              rows="3"
+              placeholder="Например, партия для сравнения двух шенов, удачный весенний сбор, чай лучше раскрывается на мягкой воде."
+            />
           </template>
         </div>
       </div>

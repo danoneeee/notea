@@ -2,20 +2,12 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import AuthModal from '../components/AuthModal.vue';
-import { useAuthStore } from '../stores/auth';
 
 const router = useRouter();
-const auth = useAuthStore();
 const showAuth = ref(false);
-const isDev = import.meta.env.DEV;
 
 function openAuth() {
   showAuth.value = true;
-}
-
-function loginDemo() {
-  auth.loginDemo();
-  router.push('/app/notes');
 }
 
 function onAuthSuccess() {
@@ -29,7 +21,6 @@ function onAuthSuccess() {
       <div class="brand">Notea</div>
       <div class="header-actions">
         <button class="btn btn-primary" @click="openAuth">Войти / Регистрация</button>
-        <button v-if="isDev" class="btn btn-ghost" @click="loginDemo">Демо-вход</button>
       </div>
     </header>
 

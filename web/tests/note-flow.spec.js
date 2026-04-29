@@ -3,6 +3,11 @@ import { expect, test } from '@playwright/test';
 test('user can create, restore draft, edit and delete a note', async ({ page }) => {
   page.on('dialog', (dialog) => dialog.accept());
 
+  const basicsInputs = page.locator('input');
+  const basicsTypeSelect = page.locator('select').first();
+  const optionalBasicsSelects = page.locator('.optional-grid select');
+  const finishSelects = page.locator('.finish-top-fields select');
+
   await page.goto('/');
   await page.getByRole('button', { name: 'Демо-вход' }).click();
   await expect(page).toHaveURL(/\/app\/notes$/);
@@ -10,10 +15,15 @@ test('user can create, restore draft, edit and delete a note', async ({ page }) 
   await page.getByRole('button', { name: 'Новая заметка' }).click();
   await expect(page).toHaveURL(/\/app\/notes\/new/);
 
-  await page.getByRole('textbox', { name: 'Название сессии / церемонии' }).fill('Тестовая сессия');
-  await page.getByRole('textbox', { name: 'Название чая' }).fill('Тестовый улун');
-  await page.getByRole('combobox', { name: 'Тип' }).selectOption('Улун');
-  await page.getByPlaceholder('Начни вводить регион').fill('Фуцзянь');
+  await basicsInputs.nth(0).fill('Тестовая сессия');
+  await basicsInputs.nth(1).fill('Тестовый улун');
+  await basicsTypeSelect.selectOption('Улун');
+  await page.getByRole('button', { name: /Показать опциональные поля/ }).click();
+  await optionalBasicsSelects.nth(0).selectOption('Китай');
+  await optionalBasicsSelects.nth(1).selectOption('Фуцзянь');
+  await optionalBasicsSelects.nth(2).selectOption('autumn');
+  await page.getByPlaceholder('2024', { exact: true }).fill('2024');
+  await page.locator('textarea').first().fill('Черновик с новой географией.');
 
   await page.getByRole('button', { name: 'Сохранить черновик' }).click();
   await expect(page.getByText('Черновик сохранён локально')).toBeVisible();
@@ -38,14 +48,20 @@ test('user can create, restore draft, edit and delete a note', async ({ page }) 
   await ratingRows.nth(1).locator('button').nth(3).click();
   await ratingRows.nth(2).locator('button').nth(3).click();
   await ratingRows.nth(3).locator('button').nth(3).click();
+  await finishSelects.nth(0).selectOption('gold');
+  await finishSelects.nth(1).selectOption('silky');
+  await finishSelects.nth(2).selectOption('focused');
+  await page.locator('textarea').last().fill('Финальные заметки для smoke-сценария.');
   await page.getByRole('button', { name: 'Сохранить заметку' }).click();
 
   await expect(page).toHaveURL(/\/app\/notes\//);
   await expect(page.getByRole('heading', { name: 'Тестовый улун' })).toBeVisible();
+  await expect(page.getByText('Китай', { exact: true })).toBeVisible();
+  await expect(page.getByText('Фуцзянь', { exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'Редактировать заметку' }).click();
   await expect(page).toHaveURL(/\/edit$/);
-  await page.getByRole('textbox', { name: 'Название чая' }).fill('Тестовый улун edited');
+  await basicsInputs.nth(1).fill('Тестовый улун edited');
 
   await page.getByRole('button', { name: 'Далее' }).click();
   await page.getByRole('button', { name: 'Далее' }).click();

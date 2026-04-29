@@ -165,7 +165,7 @@ function renderChart() {
       formatter: (params: { name: string; value?: number; data?: { russianName?: string } }) => {
         const value = Number(params.value ?? 0);
         const russianName = params.data?.russianName ?? mapNameToRussianName[params.name] ?? params.name;
-        return `${russianName}<br/>Выпито чая: <strong>${value}</strong>`;
+        return `${russianName}<br/>Заметок: <strong>${value}</strong>`;
       },
     },
     visualMap: {

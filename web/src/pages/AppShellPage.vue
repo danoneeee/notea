@@ -2,6 +2,8 @@
 import { computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { hydrateNotesFromRemote } from '../services/notes';
+import { hydrateSetupsFromRemote } from '../services/setups';
+import { hydrateTeawareFromRemote } from '../services/teaware';
 import { useAuthStore } from '../stores/auth';
 
 const route = useRoute();
@@ -31,7 +33,10 @@ function goHome() {
 }
 
 onMounted(() => {
-  void hydrateNotesFromRemote();
+  void (async () => {
+    await Promise.allSettled([hydrateTeawareFromRemote(), hydrateSetupsFromRemote()]);
+    await hydrateNotesFromRemote();
+  })();
 });
 </script>
 

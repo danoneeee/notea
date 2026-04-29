@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"time"
 
 	authv1 "notea/api/proto/auth/v1"
 
@@ -11,6 +12,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Server struct {
@@ -39,10 +41,11 @@ func (s *Server) Register(ctx context.Context, req *authv1.RegisterRequest) (*au
 	}
 
 	var id string
+	var createdAt time.Time
 	err = s.pool.QueryRow(ctx,
-		`INSERT INTO users (email, password_hash, display_name) VALUES ($1, $2, $3) RETURNING id::text`,
+		`INSERT INTO users (email, password_hash, display_name) VALUES ($1, $2, $3) RETURNING id::text, created_at`,
 		req.GetEmail(), string(hash), req.GetDisplayName(),
-	).Scan(&id)
+	).Scan(&id, &createdAt)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -57,6 +60,7 @@ func (s *Server) Register(ctx context.Context, req *authv1.RegisterRequest) (*au
 			Id:          id,
 			Email:       req.GetEmail(),
 			DisplayName: req.GetDisplayName(),
+			CreatedAt:   timestamppb.New(createdAt),
 		},
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
@@ -65,10 +69,11 @@ func (s *Server) Register(ctx context.Context, req *authv1.RegisterRequest) (*au
 
 func (s *Server) Login(ctx context.Context, req *authv1.LoginRequest) (*authv1.LoginResponse, error) {
 	var id, passwordHash, displayName string
+	var createdAt time.Time
 	err := s.pool.QueryRow(ctx,
-		`SELECT id::text, password_hash, display_name FROM users WHERE email = $1`,
+		`SELECT id::text, password_hash, display_name, created_at FROM users WHERE email = $1`,
 		req.GetEmail(),
-	).Scan(&id, &passwordHash, &displayName)
+	).Scan(&id, &passwordHash, &displayName, &createdAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, status.Error(codes.NotFound, "user not found")
 	}
@@ -90,6 +95,7 @@ func (s *Server) Login(ctx context.Context, req *authv1.LoginRequest) (*authv1.L
 			Id:          id,
 			Email:       req.GetEmail(),
 			DisplayName: displayName,
+			CreatedAt:   timestamppb.New(createdAt),
 		},
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
@@ -97,7 +103,7 @@ func (s *Server) Login(ctx context.Context, req *authv1.LoginRequest) (*authv1.L
 }
 
 func (s *Server) Validate(ctx context.Context, req *authv1.ValidateRequest) (*authv1.ValidateResponse, error) {
-	userID, err := ValidateToken(s.jwtSecret, req.GetAccessToken())
+	userID, err := ValidateTokenUse(s.jwtSecret, req.GetAccessToken(), "access")
 	if err != nil {
 		return &authv1.ValidateResponse{Ok: false}, nil
 	}
@@ -105,7 +111,7 @@ func (s *Server) Validate(ctx context.Context, req *authv1.ValidateRequest) (*au
 }
 
 func (s *Server) RefreshSession(ctx context.Context, req *authv1.RefreshSessionRequest) (*authv1.RefreshSessionResponse, error) {
-	userID, err := ValidateToken(s.jwtSecret, req.GetRefreshToken())
+	userID, err := ValidateTokenUse(s.jwtSecret, req.GetRefreshToken(), "refresh")
 	if err != nil {
 		return nil, status.Error(codes.Unauthenticated, "invalid refresh token")
 	}

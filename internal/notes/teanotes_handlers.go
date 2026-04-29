@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	teanotesv1 "notea/api/proto/teanotes/v1"
 
@@ -34,11 +35,15 @@ func (s *Server) UpsertTeaNote(ctx context.Context, req *teanotesv1.UpsertTeaNot
 	if note.UpdatedAt == nil {
 		note.UpdatedAt = timestamppb.Now()
 	}
+	if note.CreatedAt == nil {
+		note.CreatedAt = note.UpdatedAt
+	}
 	opts := protojson.MarshalOptions{EmitUnpopulated: false}
 	payload, err := opts.Marshal(note)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	created := note.CreatedAt.AsTime()
 	updated := note.UpdatedAt.AsTime()
 
 	tx, err := s.pool.Begin(ctx)
@@ -56,19 +61,43 @@ func (s *Server) UpsertTeaNote(ctx context.Context, req *teanotesv1.UpsertTeaNot
 		if owner != userID {
 			return nil, status.Error(codes.PermissionDenied, "note belongs to another user")
 		}
+		var storedCreatedAt time.Time
+		var storedBody []byte
+		if scanErr := tx.QueryRow(ctx, `
+			SELECT created_at, body
+			FROM tea_notes
+			WHERE id = $1::uuid AND user_id = $2::uuid`,
+			idStr, userID,
+		).Scan(&storedCreatedAt, &storedBody); scanErr != nil {
+			return nil, scanErr
+		}
+		var storedNote teanotesv1.TeaNote
+		if unmarshalErr := protojson.Unmarshal(storedBody, &storedNote); unmarshalErr == nil {
+			if storedNote.CreatedAt != nil {
+				note.CreatedAt = storedNote.CreatedAt
+				created = storedNote.CreatedAt.AsTime()
+			} else {
+				note.CreatedAt = timestamppb.New(storedCreatedAt)
+				created = storedCreatedAt
+			}
+			payload, err = opts.Marshal(note)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		}
 		_, execErr := tx.Exec(ctx, `
-			UPDATE tea_notes SET updated_at = $1, body = $2::jsonb
-			WHERE id = $3::uuid AND user_id = $4::uuid`,
-			updated, payload, idStr, userID,
+			UPDATE tea_notes SET created_at = $1, updated_at = $2, body = $3::jsonb
+			WHERE id = $4::uuid AND user_id = $5::uuid`,
+			created, updated, payload, idStr, userID,
 		)
 		if execErr != nil {
 			return nil, execErr
 		}
 	} else {
 		_, execErr := tx.Exec(ctx, `
-			INSERT INTO tea_notes (id, user_id, updated_at, body)
-			VALUES ($1::uuid, $2::uuid, $3, $4::jsonb)`,
-			idStr, userID, updated, payload,
+			INSERT INTO tea_notes (id, user_id, created_at, updated_at, body)
+			VALUES ($1::uuid, $2::uuid, $3, $4, $5::jsonb)`,
+			idStr, userID, created, updated, payload,
 		)
 		if execErr != nil {
 			return nil, execErr
@@ -126,7 +155,7 @@ func (s *Server) ListTeaNotes(ctx context.Context, req *teanotesv1.ListTeaNotesR
 	rows, err := s.pool.Query(ctx, `
 		SELECT body FROM tea_notes
 		WHERE user_id = $1::uuid
-		ORDER BY updated_at DESC
+		ORDER BY created_at DESC, updated_at DESC
 		LIMIT $2 OFFSET $3`,
 		userID, limit, offset,
 	)

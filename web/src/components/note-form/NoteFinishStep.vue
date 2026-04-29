@@ -23,7 +23,7 @@ defineProps<{
     ratings: Ref<Ratings>;
     noteColor: Ref<string>;
     isFavorite: Ref<boolean>;
-    freeText: Ref<string>;
+    cupProfileNotes: Ref<string>;
   };
   invalidFields: {
     ratings: boolean;
@@ -110,13 +110,13 @@ defineProps<{
       <section class="notes-panel final-notes">
         <div class="final-section-head">
           <div>
-            <h3>Свободные заметки</h3>
-            <p>Коротко опиши, как раскрывался чай и что особенно запомнилось.</p>
+            <h3>Заметка к профилю чашки</h3>
+            <p>Опиши именно ощущения от чашки: как раскрывался вкус, где появилась сладость и что осталось в памяти.</p>
           </div>
         </div>
         <label class="field field-span-all notes-field">
           <textarea
-            v-model="fields.freeText.value"
+            v-model="fields.cupProfileNotes.value"
             rows="10"
             placeholder="Как раскрывался чай по проливам, где появилась сладость, какое было тело, что случилось в конце..."
           />

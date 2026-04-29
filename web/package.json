@@ -15,6 +15,7 @@
     "@bufbuild/protobuf": "^1.10.0",
     "china-map-geojson": "^1.0.4",
     "echarts": "^6.0.0",
+    "geojson-world-map": "^0.0.2",
     "vue": "^3.4.0",
     "vue-router": "^5.0.4"
   },

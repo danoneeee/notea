@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { CreateSessionRequest, CreateSessionResponse, DeleteTeaNoteRequest, DeleteTeaNoteResponse, GetSessionRequest, GetSessionResponse, GetTeaNoteRequest, GetTeaNoteResponse, ListDescriptorCategoriesRequest, ListDescriptorCategoriesResponse, ListSessionsRequest, ListSessionsResponse, ListTeaNotesRequest, ListTeaNotesResponse, ListTeasRequest, ListTeasResponse, UpsertTeaNoteRequest, UpsertTeaNoteResponse } from "./tea_notes_pb.ts";
+import { ArchiveTeaSetupRequest, ArchiveTeaSetupResponse, ArchiveTeawareRequest, ArchiveTeawareResponse, CreateSessionRequest, CreateSessionResponse, DeleteTeaNoteRequest, DeleteTeaNoteResponse, GetSessionRequest, GetSessionResponse, GetTeaNoteRequest, GetTeaNoteResponse, ListDescriptorCategoriesRequest, ListDescriptorCategoriesResponse, ListSessionsRequest, ListSessionsResponse, ListTeaNotesRequest, ListTeaNotesResponse, ListTeaSetupsRequest, ListTeaSetupsResponse, ListTeasRequest, ListTeasResponse, ListTeawareRequest, ListTeawareResponse, UpsertTeaNoteRequest, UpsertTeaNoteResponse, UpsertTeaSetupRequest, UpsertTeaSetupResponse, UpsertTeawareRequest, UpsertTeawareResponse } from "./tea_notes_pb.ts";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -103,6 +103,62 @@ export const TeaNotesService = {
       name: "DeleteTeaNote",
       I: DeleteTeaNoteRequest,
       O: DeleteTeaNoteResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * ---- Посуда и сетапы ----
+     *
+     * @generated from rpc teanotes.v1.TeaNotesService.ListTeaware
+     */
+    listTeaware: {
+      name: "ListTeaware",
+      I: ListTeawareRequest,
+      O: ListTeawareResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc teanotes.v1.TeaNotesService.UpsertTeaware
+     */
+    upsertTeaware: {
+      name: "UpsertTeaware",
+      I: UpsertTeawareRequest,
+      O: UpsertTeawareResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc teanotes.v1.TeaNotesService.ArchiveTeaware
+     */
+    archiveTeaware: {
+      name: "ArchiveTeaware",
+      I: ArchiveTeawareRequest,
+      O: ArchiveTeawareResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc teanotes.v1.TeaNotesService.ListTeaSetups
+     */
+    listTeaSetups: {
+      name: "ListTeaSetups",
+      I: ListTeaSetupsRequest,
+      O: ListTeaSetupsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc teanotes.v1.TeaNotesService.UpsertTeaSetup
+     */
+    upsertTeaSetup: {
+      name: "UpsertTeaSetup",
+      I: UpsertTeaSetupRequest,
+      O: UpsertTeaSetupResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc teanotes.v1.TeaNotesService.ArchiveTeaSetup
+     */
+    archiveTeaSetup: {
+      name: "ArchiveTeaSetup",
+      I: ArchiveTeaSetupRequest,
+      O: ArchiveTeaSetupResponse,
       kind: MethodKind.Unary,
     },
   }

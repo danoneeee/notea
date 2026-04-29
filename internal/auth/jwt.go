@@ -14,6 +14,7 @@ const (
 
 type claims struct {
 	jwt.RegisteredClaims
+	TokenUse string `json:"token_use,omitempty"`
 }
 
 func Issue(secret, userID string) (accessToken, refreshToken string, err error) {
@@ -24,6 +25,7 @@ func Issue(secret, userID string) (accessToken, refreshToken string, err error) 
 			ExpiresAt: jwt.NewNumericDate(now.Add(accessTokenExp)),
 			IssuedAt:  jwt.NewNumericDate(now),
 		},
+		TokenUse: "access",
 	}
 	access := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
 	accessToken, err = access.SignedString([]byte(secret))
@@ -37,6 +39,7 @@ func Issue(secret, userID string) (accessToken, refreshToken string, err error) 
 			ExpiresAt: jwt.NewNumericDate(now.Add(refreshTokenExp)),
 			IssuedAt:  jwt.NewNumericDate(now),
 		},
+		TokenUse: "refresh",
 	}
 	refresh := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
 	refreshToken, err = refresh.SignedString([]byte(secret))
@@ -46,15 +49,33 @@ func Issue(secret, userID string) (accessToken, refreshToken string, err error) 
 	return accessToken, refreshToken, nil
 }
 
-func ValidateToken(secret, tokenString string) (userID string, err error) {
+func validateTokenClaims(secret, tokenString string) (*claims, error) {
 	tok, err := jwt.ParseWithClaims(tokenString, &claims{}, func(t *jwt.Token) (interface{}, error) {
 		return []byte(secret), nil
 	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	c, ok := tok.Claims.(*claims)
 	if !ok || !tok.Valid {
+		return nil, jwt.ErrTokenInvalidClaims
+	}
+	if c.TokenUse == "" {
+		c.TokenUse = "access"
+	}
+	return c, nil
+}
+
+func ValidateToken(secret, tokenString string) (userID string, err error) {
+	return ValidateTokenUse(secret, tokenString, "access")
+}
+
+func ValidateTokenUse(secret, tokenString, expectedUse string) (userID string, err error) {
+	c, err := validateTokenClaims(secret, tokenString)
+	if err != nil {
+		return "", err
+	}
+	if c.TokenUse != expectedUse {
 		return "", jwt.ErrTokenInvalidClaims
 	}
 	return c.Subject, nil
