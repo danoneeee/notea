@@ -17,7 +17,7 @@ const avatarInput = ref<HTMLInputElement | null>(null);
 const avatarImage = ref(typeof window !== 'undefined' ? localStorage.getItem(PROFILE_AVATAR_KEY) || '' : '');
 
 const notes = computed(() => {
-  notesRevision.value;
+  void notesRevision.value;
   return listNotes();
 });
 

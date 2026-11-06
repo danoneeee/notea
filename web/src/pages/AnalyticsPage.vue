@@ -75,8 +75,6 @@ const countryFlags: Record<string, string> = {
   Кения: '🇰🇪',
 };
 
-type CountStat = { key: string; label: string; count: number };
-type RegionRatingStat = { key: string; region: string; country: string; count: number; average: number; percent: number };
 type CountryRatingStat = { country: string; count: number; average: number; percent: number };
 
 function isLeafDescriptorId(raw: string) {
@@ -125,7 +123,7 @@ function getCountryFlag(country: string) {
 }
 
 const notes = computed(() => {
-  notesRevision.value;
+  void notesRevision.value;
   return listNotes();
 });
 
@@ -225,7 +223,6 @@ const uniqueChinaRegions = computed(() => chinaProvinceStats.value.length);
 const uniqueCountries = computed(() => countryStats.value.filter(([country]) => country !== 'Не указана').length);
 const uniqueTeaTypes = computed(() => new Set(filteredNotes.value.map((note) => note.teaType.trim() || 'Не указан')).size);
 
-const topProvince = computed(() => provinceStats.value[0] ?? null);
 const topCountry = computed(() => countryStats.value.find(([country]) => country !== 'Не указана') ?? null);
 const topTeaType = computed(() => teaTypeStats.value[0] ?? null);
 
@@ -413,7 +410,7 @@ const brewingPortraitCopy = computed(() => {
 });
 
 const setupNameById = computed(() => {
-  setupsRevision.value;
+  void setupsRevision.value;
   return Object.fromEntries(listSetups().map((setup) => [setup.id, setup.name]));
 });
 const setupStats = computed(() =>
@@ -423,9 +420,7 @@ const setupStats = computed(() =>
   ),
 );
 const waterSourceStats = computed(() => countStats(filteredNotes.value.map((note) => note.waterSource), { excludeEmpty: true, limit: 4 }));
-const harvestSeasonStats = computed(() =>
-  countStats(filteredNotes.value.map((note) => note.harvestSeason), { labelMap: harvestSeasonLabels, excludeEmpty: true, limit: 4 }),
-);
+
 const liquorColorStats = computed(() =>
   countStats(filteredNotes.value.map((note) => note.liquorColor), { labelMap: liquorColorLabels, excludeEmpty: true, limit: 4 }),
 );
@@ -463,12 +458,7 @@ const journalSpanDays = computed(() => {
   return Math.max(1, Math.round((max - min) / (1000 * 60 * 60 * 24)) + 1);
 });
 
-const countryCoverage = computed(() => coveragePercent((note) => Boolean(note.country.trim())));
-const originDetailCoverage = computed(() => coveragePercent((note) => Boolean(note.originRegion.trim())));
-const harvestCoverage = computed(() => coveragePercent((note) => Boolean(note.harvestSeason?.trim()) || typeof note.harvestYear === 'number'));
-const passportNotesCoverage = computed(() => coveragePercent((note) => Boolean(note.passportNotes?.trim())));
 const setupCoverage = computed(() => coveragePercent((note) => Boolean(note.setupId || note.setupSummary.trim())));
-const descriptorCoverage = computed(() => coveragePercent((note) => note.descriptors.length > 0));
 
 const passportRichNotes = computed(
   () =>
@@ -484,19 +474,6 @@ const passportRichNotes = computed(
     }).length,
 );
 const passportRichPercent = computed(() => (totalNotes.value ? Math.round((passportRichNotes.value / totalNotes.value) * 100) : 0));
-
-const harvestYearSummary = computed(() => {
-  const values = filteredNotes.value
-    .map((note) => note.harvestYear)
-    .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
-  if (!values.length) return null;
-  const average = Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
-  return {
-    average,
-    freshest: Math.max(...values),
-    oldest: Math.min(...values),
-  };
-});
 
 const averageCupRating = computed(() =>
   averageStat(
@@ -544,34 +521,6 @@ const cupPortraitCopy = computed(() => {
   return `Чаще всего это ${parts.join(', ').toLowerCase()} чашка.`;
 });
 
-function buildRegionRatingStats(metric: keyof (typeof filteredNotes.value)[number]['ratings']): RegionRatingStat[] {
-  const map = new Map<string, { region: string; country: string; count: number; total: number }>();
-  for (const note of filteredNotes.value) {
-    const region = note.originRegion.trim() || note.region.trim();
-    if (!region) continue;
-    const country = note.country.trim() || 'Страна не указана';
-    const key = `${country}__${region}`;
-    const current = map.get(key) ?? { region, country, count: 0, total: 0 };
-    current.count += 1;
-    current.total += note.ratings[metric];
-    map.set(key, current);
-  }
-  return [...map.entries()]
-    .map(([key, stats]) => ({
-      key,
-      region: stats.region,
-      country: stats.country,
-      count: stats.count,
-      average: stats.total / stats.count,
-    }))
-    .sort((a, b) => b.average - a.average || b.count - a.count)
-    .slice(0, 4)
-    .map((item) => ({
-      ...item,
-      percent: Math.round((item.average / 5) * 100),
-    }));
-}
-
 function buildCountryRatingStats(metric: keyof (typeof filteredNotes.value)[number]['ratings']): CountryRatingStat[] {
   const map = new Map<string, { count: number; total: number }>();
   for (const note of filteredNotes.value) {
@@ -593,66 +542,10 @@ function buildCountryRatingStats(metric: keyof (typeof filteredNotes.value)[numb
     .slice(0, 4);
 }
 
-const regionAromaStats = computed(() => buildRegionRatingStats('aroma'));
-const regionTasteStats = computed(() => buildRegionRatingStats('taste'));
-const regionAftertasteStats = computed(() => buildRegionRatingStats('aftertaste'));
-const regionBalanceStats = computed(() => buildRegionRatingStats('balance'));
 const countryAromaStats = computed(() => buildCountryRatingStats('aroma'));
 const countryTasteStats = computed(() => buildCountryRatingStats('taste'));
 const countryAftertasteStats = computed(() => buildCountryRatingStats('aftertaste'));
 const countryBalanceStats = computed(() => buildCountryRatingStats('balance'));
-const regionRatingCards = computed(() => [
-  {
-    key: 'aroma',
-    title: 'Аромат',
-    copy: 'Где чаще всего попадаются самые выразительные ароматы.',
-    items: regionAromaStats.value,
-  },
-  {
-    key: 'taste',
-    title: 'Вкус',
-    copy: 'Рейтинг регионов по средней силе вкуса в заметках.',
-    items: regionTasteStats.value,
-  },
-  {
-    key: 'aftertaste',
-    title: 'Послевкусие',
-    copy: 'Какие регионы чаще оставляют самый длинный и приятный хвост.',
-    items: regionAftertasteStats.value,
-  },
-  {
-    key: 'balance',
-    title: 'Баланс',
-    copy: 'Насколько гармоничными в среднем оказываются чаи из региона.',
-    items: regionBalanceStats.value,
-  },
-]);
-const countryRatingCards = computed(() => [
-  {
-    key: 'aroma',
-    title: 'Аромат',
-    copy: 'Средняя оценка аромата по странам происхождения.',
-    items: countryAromaStats.value,
-  },
-  {
-    key: 'taste',
-    title: 'Вкус',
-    copy: 'Какие страны чаще дают самые сильные вкусовые впечатления.',
-    items: countryTasteStats.value,
-  },
-  {
-    key: 'aftertaste',
-    title: 'Послевкусие',
-    copy: 'Где в среднем получается самый длинный и приятный хвост.',
-    items: countryAftertasteStats.value,
-  },
-  {
-    key: 'balance',
-    title: 'Баланс',
-    copy: 'Насколько гармоничными оказываются чаи по странам происхождения.',
-    items: countryBalanceStats.value,
-  },
-]);
 
 const regionDescriptorProfiles = computed(() => {
   const regionMap = new Map<string, { key: string; region: string; country: string; notesCount: number }>();

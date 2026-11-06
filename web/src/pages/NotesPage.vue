@@ -20,11 +20,11 @@ const route = useRoute();
 const router = useRouter();
 
 const notes = computed(() => {
-  notesRevision.value;
+  void notesRevision.value;
   return listNotes();
 });
 const latestDraft = computed(() => {
-  notesRevision.value;
+  void notesRevision.value;
   return getLatestDraft();
 });
 const routeFilters = computed(() => ({

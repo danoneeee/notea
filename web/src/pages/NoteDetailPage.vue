@@ -30,11 +30,11 @@ const removing = ref(false);
 
 const noteId = computed(() => String(route.params.noteId || ''));
 const note = computed(() => {
-  notesRevision.value;
+  void notesRevision.value;
   return getNoteById(noteId.value);
 });
 const syncMeta = computed(() => {
-  notesSyncRevision.value;
+  void notesSyncRevision.value;
   return getNoteSyncMeta(noteId.value);
 });
 const descriptorLabels = computed(() => (note.value?.descriptors ?? []).map((item) => describeDescriptorPath(item)));

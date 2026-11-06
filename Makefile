@@ -9,7 +9,7 @@ help: ## Show available commands
 install: ## Install Go, web and frontend tooling dependencies (requires network)
 	go mod download
 	npm ci --prefix web
-	npm install --prefix tools --ignore-scripts --no-audit --no-fund
+	npm ci --prefix tools --ignore-scripts --no-audit --no-fund
 
 fmt: ## Format handwritten Go code
 	gofmt -w cmd internal

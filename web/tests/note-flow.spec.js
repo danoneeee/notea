@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test('user can create, restore draft, edit and delete a note', async ({ page }) => {
   page.on('dialog', (dialog) => dialog.accept());
+  const email = `e2e-${Date.now()}@notea.test`;
 
   const basicsInputs = page.locator('input');
   const basicsTypeSelect = page.locator('select').first();
@@ -9,7 +10,12 @@ test('user can create, restore draft, edit and delete a note', async ({ page }) 
   const finishSelects = page.locator('.finish-top-fields select');
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Демо-вход' }).click();
+  await page.getByRole('button', { name: 'Начать бесплатно' }).click();
+  await page.getByRole('button', { name: 'Регистрация', exact: true }).click();
+  await page.getByLabel('Имя').fill('E2E Чаевод');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Пароль').fill('e2e-password-123');
+  await page.getByRole('button', { name: 'Создать аккаунт' }).click();
   await expect(page).toHaveURL(/\/app\/notes$/);
 
   await page.getByRole('button', { name: 'Новая заметка' }).click();
@@ -61,7 +67,10 @@ test('user can create, restore draft, edit and delete a note', async ({ page }) 
 
   await page.getByRole('button', { name: 'Редактировать заметку' }).click();
   await expect(page).toHaveURL(/\/edit$/);
-  await basicsInputs.nth(1).fill('Тестовый улун edited');
+  const teaNameInput = page.getByPlaceholder('Например, Лао Бан Чжан, Да Хун Пао, Бай Му Дань');
+  await expect(teaNameInput).toHaveValue('Тестовый улун');
+  await teaNameInput.fill('Тестовый улун edited');
+  await expect(teaNameInput).toHaveValue('Тестовый улун edited');
 
   await page.getByRole('button', { name: 'Далее' }).click();
   await page.getByRole('button', { name: 'Далее' }).click();

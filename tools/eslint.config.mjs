@@ -24,6 +24,15 @@ export default tseslint.config(
     rules: { '@typescript-eslint/no-explicit-any': 'warn' },
   },
   {
+    files: ['**/components/note-form/*.vue'],
+    // Form steps intentionally receive refs from their parent as a shared model.
+    rules: { 'vue/no-mutating-props': ['error', { shallowOnly: true }] },
+  },
+  {
+    files: ['**/*.cjs'],
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
+  {
     files: ['**/*.vue'],
     languageOptions: {
       parser: vueParser,

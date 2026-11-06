@@ -47,10 +47,12 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: |
+            web/package-lock.json
+            tools/package-lock.json
       - run: npm ci --prefix web
       - name: Install pinned frontend quality tools
-        run: npm install --prefix tools --ignore-scripts --no-audit --no-fund
+        run: npm ci --prefix tools --ignore-scripts --no-audit --no-fund
       - run: make lint-web build-web
       - uses: actions/upload-artifact@v4
         with:
@@ -67,9 +69,11 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: |
+            web/package-lock.json
+            tools/package-lock.json
       - run: npm ci --prefix web
-      - run: npx --prefix web playwright install --with-deps chromium
+      - run: npm exec --prefix web -- playwright install --with-deps chromium
       - name: Build and start backend stack
         run: |
           docker compose up --build -d postgres auth

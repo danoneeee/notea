@@ -21,9 +21,6 @@ Playwright traces and service logs. The Docker job verifies development images;
 No production deploy is configured: a deployment destination, credentials and
 release/rollback requirements must be chosen first.
 
-Frontend quality tools have exact direct versions in `tools/package.json`.
-Their transitive dependency lockfile could not be generated offline. After a
-network-enabled `npm install --prefix tools`, review and commit
-`tools/package-lock.json`, then switch both installation commands in the workflow
-and Makefile to `npm ci --prefix tools --ignore-scripts --no-audit --no-fund`.
-The existing application lockfile at `web/package-lock.json` is retained.
+Frontend quality tools and their transitive dependencies are pinned in
+`tools/package-lock.json`. Both the workflow and Makefile install them with
+`npm ci`. Dependabot proposes weekly dependency and Actions updates.
