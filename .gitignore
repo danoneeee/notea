@@ -40,3 +40,8 @@ docs/
 /web/test-results/
 /worddocs/
 
+
+# Quality tooling and generated reports
+/tools/node_modules/
+/coverage/
+/web/playwright-report/

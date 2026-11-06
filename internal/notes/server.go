@@ -44,4 +44,3 @@ func (s *Server) ListTeas(ctx context.Context, req *teanotesv1.ListTeasRequest) 
 func (s *Server) ListDescriptorCategories(ctx context.Context, req *teanotesv1.ListDescriptorCategoriesRequest) (*teanotesv1.ListDescriptorCategoriesResponse, error) {
 	return &teanotesv1.ListDescriptorCategoriesResponse{Categories: descriptorCatalog}, nil
 }
-
