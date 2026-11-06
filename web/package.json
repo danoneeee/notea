@@ -7,7 +7,9 @@
     "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview --host",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "lint": "node ../tools/node_modules/eslint/bin/eslint.js --config ../tools/eslint.config.mjs .",
+    "typecheck": "node ../tools/node_modules/vue-tsc/bin/vue-tsc.js --noEmit"
   },
   "dependencies": {
     "@bufbuild/connect": "^0.13.0",
@@ -25,5 +27,8 @@
     "@vitejs/plugin-vue": "^5.1.0",
     "typescript": "^5.4.0",
     "vite": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

@@ -20,7 +20,7 @@ const errorMessage = ref('');
 
 const newTeawareName = ref('');
 const newTeawareType = ref<TeawareType>('teapot');
-const newTeawareColor = ref(noteColorOptions[1]?.value || '#7dbb6f');
+const newTeawareColor = ref<string>(noteColorOptions[1]?.value || '#7dbb6f');
 
 const colorOptions = computed(() => noteColorOptions.slice(1)); // без "Без цвета"
 

@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    name: Go checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go mod download
+      - run: make lint-go test-go build-go
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: go-coverage
+          path: coverage/go.out
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backend-linux-amd64
+          path: bin/
+
+  web:
+    name: Web checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            tools/package-lock.json
+      - run: npm ci --prefix web
+      - name: Install pinned frontend quality tools
+        run: npm ci --prefix tools --ignore-scripts --no-audit --no-fund
+      - run: make lint-web build-web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist/
+
+  e2e:
+    name: Browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            tools/package-lock.json
+      - run: npm ci --prefix web
+      - run: npm exec --prefix web -- playwright install --with-deps chromium
+      - name: Build and start backend stack
+        run: |
+          docker compose up --build -d postgres auth
+          # Let auth finish its migrations before starting the notes service.
+          timeout 120 sh -c 'until docker compose logs auth | grep -q "Auth gRPC server listening"; do sleep 2; done'
+          docker compose up --build -d notes envoy
+          timeout 120 sh -c 'until docker compose logs notes | grep -q "Notes gRPC server listening"; do sleep 2; done'
+          timeout 60 sh -c 'until [ "$(curl --silent --output /dev/null --write-out "%{http_code}" http://localhost:8080/)" = 404 ]; do sleep 2; done'
+      - run: make test-e2e
+        env:
+          CI: 'true'
+      - name: Collect service logs
+        if: always()
+        run: docker compose logs --no-color > service-logs.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-test-results
+          path: |
+            web/playwright-report/
+            web/test-results/
+            service-logs.txt
+          retention-days: 7
+      - name: Stop backend stack
+        if: always()
+        run: docker compose down --volumes
+
+  containers:
+    name: Docker builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose config --quiet
+      - run: docker compose build

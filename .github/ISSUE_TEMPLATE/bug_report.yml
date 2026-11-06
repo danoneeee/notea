@@ -1,0 +1,27 @@
+name: Ошибка
+description: Сообщить о проблеме в Notea
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Что произошло
+      description: Опиши фактическое и ожидаемое поведение.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Как воспроизвести
+      placeholder: "1. Открыть…\n2. Нажать…\n3. Получить…"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Окружение
+      placeholder: ОС, браузер и версия, запуск через Docker или локально
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Скриншоты и логи
+      description: Не прикладывай пароли, токены и персональные данные.

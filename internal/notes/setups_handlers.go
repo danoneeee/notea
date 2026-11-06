@@ -87,12 +87,12 @@ func (s *Server) ListTeaSetups(ctx context.Context, req *teanotesv1.ListTeaSetup
 	out := make([]*teanotesv1.TeaSetup, 0, len(base))
 	for _, r := range base {
 		setup := &teanotesv1.TeaSetup{
-			Id:        r.id,
-			Name:      r.name,
+			Id:         r.id,
+			Name:       r.name,
 			TeawareIds: itemsBySetup[r.id],
-			Archived:  r.archivedAt != nil,
-			CreatedAt: timestamppb.New(r.createdAt),
-			UpdatedAt: timestamppb.New(r.updatedAt),
+			Archived:   r.archivedAt != nil,
+			CreatedAt:  timestamppb.New(r.createdAt),
+			UpdatedAt:  timestamppb.New(r.updatedAt),
 		}
 		if r.archivedAt != nil {
 			setup.ArchivedAt = timestamppb.New(*r.archivedAt)
@@ -223,12 +223,12 @@ func (s *Server) UpsertTeaSetup(ctx context.Context, req *teanotesv1.UpsertTeaSe
 	}
 
 	out := &teanotesv1.TeaSetup{
-		Id:        idStr,
-		Name:      nameOut,
+		Id:         idStr,
+		Name:       nameOut,
 		TeawareIds: unique,
-		Archived:  archivedAt != nil,
-		CreatedAt: timestamppb.New(createdAt),
-		UpdatedAt: timestamppb.New(updatedAt),
+		Archived:   archivedAt != nil,
+		CreatedAt:  timestamppb.New(createdAt),
+		UpdatedAt:  timestamppb.New(updatedAt),
 	}
 	if archivedAt != nil {
 		out.ArchivedAt = timestamppb.New(*archivedAt)
@@ -267,4 +267,3 @@ func (s *Server) ArchiveTeaSetup(ctx context.Context, req *teanotesv1.ArchiveTea
 	}
 	return &teanotesv1.ArchiveTeaSetupResponse{}, nil
 }
-

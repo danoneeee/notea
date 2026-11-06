@@ -32,7 +32,7 @@ defineProps<{
     energyEffect: boolean;
   };
   ratingsAverage: string;
-  noteColorOptions: NoteColorOption[];
+  noteColorOptions: readonly NoteColorOption[];
   setRating: (key: keyof Ratings, value: number) => void;
 }>();
 </script>

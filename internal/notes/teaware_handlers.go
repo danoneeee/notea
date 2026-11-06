@@ -266,4 +266,3 @@ func toProtoTeawareType(db string) teanotesv1.TeawareType {
 		return teanotesv1.TeawareType_TEAWARE_TYPE_OTHER
 	}
 }
-
